@@ -293,7 +293,7 @@ const COLS={
 };
 const MONTHS=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const TAB_ORDER=['GERAL','HOLTER','REPETICAO','MAPA','ECG','CHAMADOS'];
-const CAROUSEL_MS=15000;
+const CAROUSEL_MS=30000;
 
 // ═══════════════════════════════════════════════
 //  STATE
@@ -649,12 +649,7 @@ async function renderRep(){
         <table><thead><tr><th>#</th><th>Central</th><th style="width:80px"></th><th style="text-align:right">Qtd</th></tr></thead>
         <tbody>${topCR.map(([n,cnt],i)=>`<tr><td class="td-rank">${i+1}</td><td class="td-name" title="${esc(n)}">${esc(n)}</td><td class="td-bar"><div class="bar-bg"><div class="bar-fill" style="width:${(cnt/mxC*100).toFixed(0)}%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div></td><td class="td-count">${fmtNum(cnt)}</td></tr>`).join('')}</tbody></table>`}</div>
     </div>
-    <div class="tables-grid">
-      <div class="table-card"><div class="table-card-title">👤 Analistas <span>(top ${tvN()})</span></div>
-        ${!topAn.length?'<p style="color:var(--text-soft);font-size:13px">Sem dados.</p>':`
-        <table><thead><tr><th>#</th><th>Analista</th><th style="width:80px"></th><th style="text-align:right">Qtd</th></tr></thead>
-        <tbody>${topAn.map(([n,cnt],i)=>`<tr><td class="td-rank">${i+1}</td><td class="td-name">${esc(n)}</td><td class="td-bar"><div class="bar-bg"><div class="bar-fill" style="width:${(cnt/mxA*100).toFixed(0)}%"></div></div></td><td class="td-count">${fmtNum(cnt)}</td></tr>`).join('')}</tbody></table>`}</div>
-    </div>`;
+
 }
 
 // ═══════════════════════════════════════════════
