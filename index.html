@@ -702,7 +702,7 @@ async function renderGeral(){
     ${tvBadge()}
     <div class="section-bar"><div style="display:flex;align-items:center;gap:14px"><div class="section-title">🏠 Visão Geral</div><div class="section-sub">${pLabel()}</div></div></div>
     <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
-      <div class="kpi-card navy-card"><div class="kpi-label">Exames Laudados</div><div class="kpi-value">${fmtNum(tot)}</div><div class="kpi-sub">Holter + Mapa + ECG</div>${cmpHTML(tot,totP)}</div>
+      <div class="kpi-card navy-card"><div class="kpi-label">Exames Solicitados</div><div class="kpi-value">${fmtNum(tot)}</div><div class="kpi-sub">Holter + Mapa + ECG</div>${cmpHTML(tot,totP)}</div>
       <div class="kpi-card cyan-card"><div class="kpi-label">Chamados</div><div class="kpi-value">${fmtNum(chamRows.length)}</div><div class="kpi-sub">no período</div>${cmpHTML(chamRows.length,chamPrev.length)}</div>
       <div class="kpi-card"><div class="kpi-label">Taxa de Repetição</div><div class="kpi-value" style="font-size:28px;color:${repPct>3?'var(--red)':'var(--green)'}">${repPct.toFixed(1)}%</div><div class="kpi-sub">${fmtNum(repRep)} de ${fmtNum(repT)}</div>${cmpHTML(repPct,repPrevPct,'',true)}</div>
     </div>
@@ -746,8 +746,8 @@ async function renderExam(tab){
     <div class="section-bar"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><div class="section-title">${emj[tab]} ${lbl[tab]}</div><div class="section-sub">${pLabel()}</div></div>
       <div class="type-toggle"><button class="type-btn ${f==='all'?'active':''}" onclick="setExamFilter('${tab}','all')">Geral</button><button class="type-btn ${f==='saas'?'active':''}" onclick="setExamFilter('${tab}','saas')">SAAS</button><button class="type-btn ${f==='td'?'active':''}" onclick="setExamFilter('${tab}','td')">TD</button></div></div>
     <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
-      <div class="kpi-card navy-card"><div class="kpi-label">Exames Laudados</div><div class="kpi-value">${fmtNum(tot)}</div><div class="kpi-sub">${pLabel()}</div>${cmpHTML(tot,prev.length)}</div>
-      <div class="kpi-card"><div class="kpi-label">Emergências</div><div class="kpi-value">${fmtNum(em)}</div><div class="kpi-sub">${tot>0?((em/tot)*100).toFixed(1):0}% dos exames laudados</div></div>
+      <div class="kpi-card navy-card"><div class="kpi-label">Exames Solicitados</div><div class="kpi-value">${fmtNum(tot)}</div><div class="kpi-sub">${pLabel()}</div>${cmpHTML(tot,prev.length)}</div>
+      <div class="kpi-card"><div class="kpi-label">Emergências</div><div class="kpi-value">${fmtNum(em)}</div><div class="kpi-sub">${tot>0?((em/tot)*100).toFixed(1):0}% dos exames solicitados</div></div>
       <div class="kpi-card cyan-card"><div class="kpi-label">Média Tempo Laudo</div><div class="kpi-value" style="font-size:24px">${fmtHMS(avgT)}</div><div class="kpi-sub">por exame</div>${avgT!==null&&prevAvg!==null?cmpHTML(avgT,prevAvg,'',true):''}</div>
       <div class="kpi-card"><div class="kpi-label">Evolução ${viewMode==='month'?'Mensal':'Semanal'}</div>${sparkHTML(trend)}</div>
     </div>
