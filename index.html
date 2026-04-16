@@ -711,7 +711,7 @@ async function renderGeral(){
       ${sCard('MAPA','🩺','Mapa',mRows,mPrev,cm)}
       ${sCard('ECG','❤️','ECG',eRows,ePrev,ce)}
       <div class="overview-sector" onclick="switchTab('REPETICAO')"><div class="sector-header"><span class="sector-emoji">🔁</span><span class="sector-name">Repetição</span></div>
-        <div class="sector-kpis"><div><div class="sector-kpi-label">Finalizados</div><div class="sector-kpi-val">${fmtNum(repFin)}</div></div><div><div class="sector-kpi-label">Repetições</div><div class="sector-kpi-val" style="color:var(--red)">${fmtNum(repRep)}</div><div class="sector-kpi-sub">${repPct.toFixed(1)}%</div></div></div></div>
+        <div class="sector-kpis"><div><div class="sector-kpi-label">Solicitados</div><div class="sector-kpi-val">${fmtNum(repFin)}</div></div><div><div class="sector-kpi-label">Repetições</div><div class="sector-kpi-val" style="color:var(--red)">${fmtNum(repRep)}</div><div class="sector-kpi-sub">${repPct.toFixed(1)}%</div></div></div></div>
       <div class="overview-sector" onclick="switchTab('CHAMADOS')"><div class="sector-header"><span class="sector-emoji">🎧</span><span class="sector-name">Chamados</span></div>
         <div class="sector-kpis"><div><div class="sector-kpi-label">Total</div><div class="sector-kpi-val">${fmtNum(chamRows.length)}</div>${cmpHTML(chamRows.length,chamPrev.length)}</div><div><div class="sector-kpi-label">Média Atend.</div><div class="sector-kpi-val" style="font-size:18px">${fmtHMS(avgSecs(chamRows,cc.tempo))}</div></div></div></div>
     </div>`;
@@ -798,7 +798,7 @@ async function renderRep(){
       <div class="rep-ring-wrap"><svg class="rep-ring-svg" width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="#e2e8f0" stroke-width="10"/><circle cx="60" cy="60" r="50" fill="none" stroke="${pct>3?'var(--red)':'var(--cyan)'}" stroke-width="10" stroke-dasharray="${circ}" stroke-dashoffset="${off}" stroke-linecap="round"/></svg>
         <div class="rep-ring-text"><div class="rep-ring-num">${pct.toFixed(1)}%</div><div class="rep-ring-label">Repetição</div></div></div>
       <div class="rep-stats">
-        <div><div class="rep-stat-label">Finalizados</div><div class="rep-stat-val">${fmtNum(fin)}</div><div class="rep-stat-sub">exames concluídos</div></div>
+        <div><div class="rep-stat-label">Solicitados</div><div class="rep-stat-val">${fmtNum(fin)}</div><div class="rep-stat-sub">exames concluídos</div></div>
         <div><div class="rep-stat-label">Repetições</div><div class="rep-stat-val" style="color:var(--red)">${fmtNum(rep)}</div><div class="rep-stat-sub">${pct.toFixed(1)}%</div>${cmpHTML(pct,pPct,'',true)}</div>
         <div><div class="rep-stat-label">SAAS</div><div class="rep-stat-val">${fmtNum(saasC)}</div><div class="rep-stat-sub">${tot>0?((saasC/tot)*100).toFixed(1):0}%</div></div>
         <div><div class="rep-stat-label">Laudos (TD)</div><div class="rep-stat-val">${fmtNum(laudC)}</div><div class="rep-stat-sub">${tot>0?((laudC/tot)*100).toFixed(1):0}%</div></div>
