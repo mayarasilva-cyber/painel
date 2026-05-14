@@ -1378,8 +1378,7 @@ async function renderLocalidade(){
   const W=450,H=460;
   let svgHTML='';
   if(cache._brGeo&&typeof d3!=='undefined'){
-    const brBbox={type:'Feature',geometry:{type:'Polygon',coordinates:[[[-74,-34],[-28.5,-34],[-28.5,5.5],[-74,5.5],[-74,-34]]]}};
-    const projection=d3.geoMercator().fitExtent([[10,5],[W-10,H-5]],brBbox);
+    const projection=d3.geoMercator().fitExtent([[10,5],[W-10,H-5]],cache._brGeo);
     const pathGen=d3.geoPath().projection(projection);
     const strokeCol=carouselActive?'#050d1a':'#f0f5fa';
 
