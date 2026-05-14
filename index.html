@@ -416,6 +416,7 @@ body.tv-mode .fin-realizado strong{color:#e2e8f0}
 <div class="period-wrap" id="weekWrap" style="display:none"><span class="period-label">Semana</span><select id="selWeek"></select></div>
 <span class="last-upd" id="lastUpd">—</span>
 <button class="hdr-btn" id="btnTv" onclick="toggleCarousel()">📺 TV</button>
+<button class="hdr-btn" id="btnPause" onclick="togglePause()" style="display:none">⏸ Pausar</button>
 <button class="hdr-btn" onclick="refreshAll()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Atualizar</button>
 </div></header>
 <div class="carousel-bar" id="carouselBar"><div class="carousel-fill" id="carouselFill"></div></div>
@@ -441,9 +442,9 @@ const CSV_BASE='https://docs.google.com/spreadsheets/d/e/2PACX-1vTcbbHtFlaA3tt8M
 const CSV_GIDS={HOLTER:'0',HOLTER_IEM:'935984391',REPETICAO:'65846932',MAPA:'1563131554',ECG:'135941513',CHAMADOS:'1748165610',FINANCEIRO:'558473626',LOCALIDADE:'1098931569',AVISOS:'2139582642',NCTS:'1774453101',ANIVERSARIANTES:'1697503541'};
 
 const COLS={
-  HOLTER:{date:1,emerg:0,tempo:4,central:7},
-  MAPA:{date:1,emerg:0,tempo:4,central:6},
-  ECG:{date:2,emerg:0,tempo:4,central:6},
+  HOLTER:{date:1,dateReq:2,emerg:0,tempo:4,central:7},
+  MAPA:{date:1,dateReq:2,emerg:0,tempo:4,central:6},
+  ECG:{date:2,dateReq:1,emerg:0,tempo:4,central:6},
   REPETICAO:{date:0,central:1,analista:2,motivo:3,saaslaudo:9,modalidade:10},
   CHAMADOS:{status:0,date:1,atendente:4,origem:6,tipoSolic:8,tempo:11},
   FINANCEIRO:{tipo:0,categoria:1,status:4,banco:5,valorPrev:6,valorReal:7,dataPrev:8,dataReal:9}
@@ -455,9 +456,9 @@ const CAROUSEL_MS=30000;
 // ═══════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════
-let cache={},currentTab='GERAL',examFilter={HOLTER:'all',MAPA:'all',ECG:'all'};
+let cache={},currentTab='GERAL',examFilter={HOLTER:'all',MAPA:'all',ECG:'all'},examDateMode={HOLTER:'conclusao',MAPA:'conclusao',ECG:'conclusao'};
 let selMonth,selYear,selWeek=1,viewMode='month';
-let carouselActive=false,carouselTimer=null,carouselProgressTimer=null;
+let carouselActive=false,carouselPaused=false,carouselTimer=null,carouselProgressTimer=null;
 
 // ═══════════════════════════════════════════════
 //  INIT
@@ -679,11 +680,21 @@ function getTrend(data,dateCol,countFn){
 //  CAROUSEL
 // ═══════════════════════════════════════════════
 function toggleCarousel(){
-  carouselActive=!carouselActive;document.getElementById('btnTv').classList.toggle('active',carouselActive);
+  carouselActive=!carouselActive;carouselPaused=false;
+  document.getElementById('btnTv').classList.toggle('active',carouselActive);
+  const btnP=document.getElementById('btnPause');
+  btnP.style.display=carouselActive?'':'none';btnP.classList.remove('active');btnP.textContent='⏸ Pausar';
   document.getElementById('carouselBar').classList.toggle('active',carouselActive);document.body.classList.toggle('tv-mode',carouselActive);
   carouselActive?startC():stopC();
 }
-function startC(){stopC();runProg();carouselTimer=setInterval(()=>{
+function togglePause(){
+  carouselPaused=!carouselPaused;
+  const btn=document.getElementById('btnPause');
+  btn.classList.toggle('active',carouselPaused);btn.textContent=carouselPaused?'▶ Retomar':'⏸ Pausar';
+  if(carouselPaused){if(carouselTimer){clearInterval(carouselTimer);carouselTimer=null}if(carouselProgressTimer){clearInterval(carouselProgressTimer);carouselProgressTimer=null}document.getElementById('carouselFill').style.width='0%'}
+  else{startC()}
+}
+function startC(){if(carouselPaused)return;stopC();runProg();carouselTimer=setInterval(()=>{
   const i=TAB_ORDER.indexOf(currentTab);
   const nextIdx=(i+1)%TAB_ORDER.length;
   // When cycle restarts (back to GERAL), toggle month/week
@@ -699,8 +710,9 @@ function runProg(){const f=document.getElementById('carouselFill');f.style.width
 // ═══════════════════════════════════════════════
 //  TAB SWITCHING
 // ═══════════════════════════════════════════════
-function switchTab(tab){currentTab=tab;document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+tab).classList.add('active');loadTab(tab);if(carouselActive)startC()}
+function switchTab(tab){currentTab=tab;document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.getElementById('tab-'+tab).classList.add('active');loadTab(tab);if(carouselActive&&!carouselPaused)startC()}
 window.setExamFilter=function(tab,f){examFilter[tab]=f;loadTab(tab)};
+window.setDateMode=function(tab,m){examDateMode[tab]=m;loadTab(tab)};
 function refreshAll(){cache={};preloadAll()}
 
 async function loadTab(tab){
@@ -773,7 +785,17 @@ function sCard(tab,emoji,name,rows,prev,c){
 // ═══════════════════════════════════════════════
 async function renderExam(tab){
   const res=tab==='HOLTER'?await getHolterMerged():await fetchData(tab);
-  const c=COLS[tab],all=filterPeriod(res.data,c.date),prevAll=filterPrevPeriod(res.data,c.date);
+  const c=COLS[tab];
+  const dm=examDateMode[tab]||'conclusao';
+  const dateCol=dm==='solicitacao'&&c.dateReq!=null?c.dateReq:c.date;
+
+  // Contagens independentes para ambas as datas (sempre visíveis nos KPIs)
+  const allConc=filterPeriod(res.data,c.date),prevConc=filterPrevPeriod(res.data,c.date);
+  const allReq=c.dateReq!=null?filterPeriod(res.data,c.dateReq):null;
+  const prevReq=c.dateReq!=null?filterPrevPeriod(res.data,c.dateReq):null;
+
+  // Filtro principal usa a data do modo selecionado
+  const all=filterPeriod(res.data,dateCol),prevAll=filterPrevPeriod(res.data,dateCol);
   const saas=all.filter(r=>isSaas(r[c.central])),td=all.filter(r=>!isSaas(r[c.central]));
   const f=examFilter[tab]||'all';
   const rows=f==='saas'?saas:f==='td'?td:all;
@@ -782,15 +804,25 @@ async function renderExam(tab){
   const avgT=avgSecs(rows,c.tempo),prevAvg=avgSecs(prev,c.tempo);
   const top=topN(rows,c.central,tvN()),mx=top[0]?.[1]||1;
   const lbl={HOLTER:'Holter',MAPA:'Mapa',ECG:'ECG'},emj={HOLTER:'📊',MAPA:'🩺',ECG:'❤️'};
-  const trend=getTrend(res.data,c.date);
+  const trend=getTrend(res.data,dateCol);
+
+  const hasReq=c.dateReq!=null;
+  const dateToggle=hasReq?`<div class="type-toggle">
+    <button class="type-btn ${dm==='conclusao'?'active':''}" onclick="setDateMode('${tab}','conclusao')">📋 Por Laudo</button>
+    <button class="type-btn ${dm==='solicitacao'?'active':''}" onclick="setDateMode('${tab}','solicitacao')">📥 Por Solicitação</button>
+  </div>`:'';
 
   document.getElementById('mainContent').innerHTML=`
     ${tvBadge()}
     <div class="section-bar"><div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap"><div class="section-title">${emj[tab]} ${lbl[tab]}</div><div class="section-sub">${pLabel()}</div></div>
-      <div class="type-toggle"><button class="type-btn ${f==='all'?'active':''}" onclick="setExamFilter('${tab}','all')">Geral</button><button class="type-btn ${f==='saas'?'active':''}" onclick="setExamFilter('${tab}','saas')">SAAS</button><button class="type-btn ${f==='td'?'active':''}" onclick="setExamFilter('${tab}','td')">TD</button></div></div>
-    <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
-      <div class="kpi-card navy-card"><div class="kpi-label">Exames Laudados</div><div class="kpi-value">${fmtNum(tot)}</div><div class="kpi-sub">${pLabel()}</div>${cmpHTML(tot,prev.length)}</div>
-      <div class="kpi-card"><div class="kpi-label">Emergências</div><div class="kpi-value">${fmtNum(em)}</div><div class="kpi-sub">${tot>0?((em/tot)*100).toFixed(1):0}% dos exames laudados</div></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        ${dateToggle}
+        <div class="type-toggle"><button class="type-btn ${f==='all'?'active':''}" onclick="setExamFilter('${tab}','all')">Geral</button><button class="type-btn ${f==='saas'?'active':''}" onclick="setExamFilter('${tab}','saas')">SAAS</button><button class="type-btn ${f==='td'?'active':''}" onclick="setExamFilter('${tab}','td')">TD</button></div>
+      </div></div>
+    <div class="kpi-grid" style="grid-template-columns:repeat(${hasReq?5:4},1fr)">
+      <div class="kpi-card navy-card"><div class="kpi-label">Laudados (Conclusão)</div><div class="kpi-value">${fmtNum(allConc.length)}</div><div class="kpi-sub">${pLabel()}</div>${cmpHTML(allConc.length,prevConc.length)}</div>
+      ${hasReq?`<div class="kpi-card" style="border-top:3px solid var(--amber)"><div class="kpi-label">Solicitados (Entrada)</div><div class="kpi-value" style="color:var(--amber)">${fmtNum(allReq.length)}</div><div class="kpi-sub">${pLabel()}</div>${cmpHTML(allReq.length,prevReq.length)}</div>`:''}
+      <div class="kpi-card"><div class="kpi-label">Emergências</div><div class="kpi-value">${fmtNum(em)}</div><div class="kpi-sub">${tot>0?((em/tot)*100).toFixed(1):0}% dos ${dm==='solicitacao'?'solicitados':'laudados'}</div></div>
       <div class="kpi-card cyan-card"><div class="kpi-label">Média Tempo Laudo</div><div class="kpi-value" style="font-size:24px">${fmtHMS(avgT)}</div><div class="kpi-sub">por exame</div>${avgT!==null&&prevAvg!==null?cmpHTML(avgT,prevAvg,'',true):''}</div>
       <div class="kpi-card"><div class="kpi-label">Evolução ${viewMode==='month'?'Mensal':'Semanal'}</div>${sparkHTML(trend)}</div>
     </div>
@@ -1326,10 +1358,15 @@ async function renderLocalidade(){
       if(city)byUF[uf].cities[city]=(byUF[uf].cities[city]||0)+1;
     }
   });
+  // Separar clientes internacionais (UF não reconhecida como estado brasileiro)
+  const byIntl={};
+  Object.keys(byUF).filter(uf=>!UF_NAMES[uf]).forEach(uf=>{byIntl[uf]=byUF[uf];delete byUF[uf]});
+
   const sortedUFs=Object.entries(byUF).sort((a,b)=>b[1].count-a[1].count);
   const maxCount=sortedUFs[0]?.[1]?.count||1;
   const numStates=sortedUFs.length;
   const numCities=Object.values(byUF).reduce((s,v)=>s+Object.keys(v.cities).length,0);
+  const intlTotal=Object.values(byIntl).reduce((s,v)=>s+v.count,0);
 
   let svgHTML=BRAZIL_SVG_PATHS;
   Object.entries(byUF).forEach(([uf,v])=>{
@@ -1347,12 +1384,27 @@ async function renderLocalidade(){
     const count=byUF[uf]?.count||0;
     if(count>0){
       const big=count>=maxCount*0.2;
-      const fillUF=carouselActive?(big?'#fff':'#94a3b8'):(big?'#0D2137':'#64748b');
-      const fillNum=carouselActive?'#38bdf8':'#0ea5e9';
-      labels+=`<text x="${x}" y="${y-2}" text-anchor="middle" font-family="Nunito,sans-serif" font-size="${big?11:9}" font-weight="800" fill="${fillUF}">${uf}</text>`;
-      labels+=`<text x="${x}" y="${y+11}" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="${big?14:10}" font-weight="800" fill="${fillNum}">${count}</text>`;
+      const strokeCol=carouselActive?'#050d1a':'#f0f5fa';
+      const fillUF='#ffffff';
+      const fillNum=carouselActive?'#7dd3fc':'#ffffff';
+      labels+=`<text x="${x}" y="${y-2}" text-anchor="middle" font-family="Nunito,sans-serif" font-size="${big?11:9}" font-weight="800" fill="${fillUF}" stroke="${strokeCol}" stroke-width="2.5" paint-order="stroke">${uf}</text>`;
+      labels+=`<text x="${x}" y="${y+11}" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="${big?14:10}" font-weight="800" fill="${fillNum}" stroke="${strokeCol}" stroke-width="2.5" paint-order="stroke">${count}</text>`;
     }
   });
+  // Badge da Alemanha / Internacional no canto superior direito do SVG
+  if(intlTotal>0){
+    const bg=carouselActive?'rgba(139,92,246,.25)':'rgba(139,92,246,.12)';
+    const border=carouselActive?'#a78bfa':'#8b5cf6';
+    const sk=carouselActive?'#050d1a':'#f0f5fa';
+    const txtCol=carouselActive?'#c4b5fd':'#7c3aed';
+    const lbl=carouselActive?'#94a3b8':'#6b7280';
+    labels+=`<g>
+      <rect x="374" y="6" width="72" height="38" rx="6" fill="${bg}" stroke="${border}" stroke-width="1.2"/>
+      <text x="410" y="18" text-anchor="middle" font-family="Nunito,sans-serif" font-size="7.5" font-weight="800" fill="${lbl}" letter-spacing="0.8">INTERNACIONAL</text>
+      <text x="410" y="29" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9.5" font-weight="800" fill="${txtCol}" stroke="${sk}" stroke-width="2" paint-order="stroke">DE - Alemanha</text>
+      <text x="410" y="40" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="11" font-weight="800" fill="${border}" stroke="${sk}" stroke-width="2" paint-order="stroke">${intlTotal} cliente${intlTotal!==1?'s':''}</text>
+    </g>`;
+  }
   svgHTML=svgHTML.replace('</svg>',labels+'</svg>');
 
   const rankN=carouselActive?10:12;
@@ -1369,9 +1421,24 @@ async function renderLocalidade(){
     </div>`;
   }).join('');
 
+  const intlRankHTML=intlTotal>0?`
+    <div style="border-top:1px dashed ${carouselActive?'#1a2744':'#e2e8f0'};margin-top:10px;padding-top:10px">
+      <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:${carouselActive?'#64748b':'#94a3b8'};margin-bottom:6px">Internacional</div>
+      ${Object.entries(byIntl).map(([uf,v])=>{
+        const topC=Object.entries(v.cities).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([c])=>c).join(', ');
+        return`<div class="map-rank-row">
+          <div class="map-rank-pos" style="font-size:13px">🌍</div>
+          <div class="map-rank-uf" style="color:${carouselActive?'#c4b5fd':'#7c3aed'}">${uf}</div>
+          <div class="map-rank-bar"><div class="map-rank-fill" style="width:100%;background:linear-gradient(90deg,#8b5cf6,#a78bfa)"></div></div>
+          <div class="map-rank-count" style="color:${carouselActive?'#a78bfa':'#8b5cf6'}">${v.count}</div>
+          <div class="map-rank-cities" title="${esc(topC)}">${esc(topC)}</div>
+        </div>`;}).join('')}
+    </div>`:'';
+
+  const totalGeral=totalClientes+intlTotal;
   document.getElementById('mainContent').innerHTML=`
     ${tvBadge()}
-    <div class="section-bar"><div style="display:flex;align-items:center;gap:14px"><div class="section-title">📍 Presença Nacional</div><div class="section-sub">${totalClientes} clientes · ${numStates} estados · ${numCities} cidades</div></div></div>
+    <div class="section-bar"><div style="display:flex;align-items:center;gap:14px"><div class="section-title">📍 Presença</div><div class="section-sub">${totalGeral} clientes · ${numStates} estados · ${numCities} cidades${intlTotal>0?' · 🌍 '+intlTotal+' internacional':''}</div></div></div>
     <div class="map-layout">
       <div class="map-container">${svgHTML}</div>
       <div class="map-sidebar">
@@ -1383,6 +1450,7 @@ async function renderLocalidade(){
         <div class="map-ranking">
           <div class="map-ranking-title">🏆 Ranking por Estado</div>
           ${rankHTML}
+          ${intlRankHTML}
         </div>
       </div>
     </div>`;
