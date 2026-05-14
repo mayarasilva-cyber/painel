@@ -899,7 +899,7 @@ async function renderRep(){
       <div class="table-card"><div class="table-card-title">🏢 Centrais com Repetições <span>(top ${tvN()})</span></div>
         ${!topCR.length?'<p style="color:var(--text-soft);font-size:13px">Sem dados.</p>':`
         <table><thead><tr><th>#</th><th>Central</th><th style="width:80px"></th><th style="text-align:right">Rep.</th><th style="text-align:right;padding-left:6px">% central</th></tr></thead>
-        <tbody>${topCR.map(([n,cnt],i)=>{const ctot=totalByCentral[n]||cnt;const cpct=ctot>0?(cnt/ctot*100):0;const cpctColor=cpct>5?'var(--red)':cpct>2?'var(--amber)':'var(--green)';return`<tr><td class="td-rank">${i+1}</td><td class="td-name" title="${esc(n)}">${esc(n)}</td><td class="td-bar"><div class="bar-bg"><div class="bar-fill" style="width:${(cnt/mxC*100).toFixed(0)}%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div></td><td class="td-count">${fmtNum(cnt)}</td><td class="td-pct" style="color:${cpctColor}">${cpct.toFixed(1)}%</td></tr>`}).join('')}</tbody></table>`}</div>
+        <tbody>${topCR.map(([n,cnt],i)=>{const ctot=totalByCentral[n]||0;const cpct=ctot>cnt?(cnt/ctot*100):ctot>0?(cnt/ctot*100):null;const cpctColor=cpct===null?'var(--text-soft)':cpct>5?'var(--red)':cpct>2?'var(--amber)':'var(--green)';return`<tr><td class="td-rank">${i+1}</td><td class="td-name" title="${esc(n)}">${esc(n)}</td><td class="td-bar"><div class="bar-bg"><div class="bar-fill" style="width:${(cnt/mxC*100).toFixed(0)}%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div></td><td class="td-count">${fmtNum(cnt)}</td><td class="td-pct" style="color:${cpctColor}">${cpct!==null?cpct.toFixed(1)+'%':'—'}</td></tr>`}).join('')}</tbody></table>`}</div>
     </div>`;
 }
 
