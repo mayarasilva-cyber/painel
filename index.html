@@ -442,8 +442,8 @@ const CSV_BASE='https://docs.google.com/spreadsheets/d/e/2PACX-1vTcbbHtFlaA3tt8M
 const CSV_GIDS={HOLTER:'0',HOLTER_IEM:'935984391',REPETICAO:'65846932',MAPA:'1563131554',ECG:'135941513',CHAMADOS:'1748165610',FINANCEIRO:'558473626',LOCALIDADE:'1098931569',AVISOS:'2139582642',NCTS:'1774453101',ANIVERSARIANTES:'1697503541'};
 
 const COLS={
-  HOLTER:{date:1,dateReq:2,emerg:0,tempo:4,central:7},
-  MAPA:{date:1,dateReq:2,emerg:0,tempo:4,central:6},
+  HOLTER:{date:2,dateReq:1,emerg:0,tempo:4,central:7},
+  MAPA:{date:2,dateReq:1,emerg:0,tempo:4,central:6},
   ECG:{date:2,dateReq:1,emerg:0,tempo:4,central:6},
   REPETICAO:{date:0,central:1,analista:2,motivo:3,saaslaudo:9,modalidade:10},
   CHAMADOS:{status:0,date:1,atendente:4,origem:6,tipoSolic:8,tempo:11},
@@ -524,7 +524,7 @@ async function preloadAll(){
 async function getHolterMerged(){
   const{data:h}=await fetchData('HOLTER');
   let iem=[];try{iem=(await fetchData('HOLTER_IEM')).data}catch(e){}
-  const mapped=iem.map(r=>{const a=new Array(11).fill('');a[0]='Não';a[1]=r[2]||'';a[4]='';a[7]='[Saas]Alemanha IEM';return a});
+  const mapped=iem.map(r=>{const a=new Array(11).fill('');a[0]='Não';a[1]=r[2]||'';a[2]=r[2]||'';a[4]='';a[7]='[Saas]Alemanha IEM';return a});
   return{data:[...h,...mapped]};
 }
 
@@ -808,7 +808,7 @@ async function renderExam(tab){
 
   const hasReq=c.dateReq!=null;
   const dateToggle=hasReq?`<div class="type-toggle">
-    <button class="type-btn ${dm==='conclusao'?'active':''}" onclick="setDateMode('${tab}','conclusao')">📋 Por Laudo</button>
+    <button class="type-btn ${dm==='conclusao'?'active':''}" onclick="setDateMode('${tab}','conclusao')">📋 Por Conclusão</button>
     <button class="type-btn ${dm==='solicitacao'?'active':''}" onclick="setDateMode('${tab}','solicitacao')">📥 Por Solicitação</button>
   </div>`:'';
 
@@ -820,8 +820,8 @@ async function renderExam(tab){
         <div class="type-toggle"><button class="type-btn ${f==='all'?'active':''}" onclick="setExamFilter('${tab}','all')">Geral</button><button class="type-btn ${f==='saas'?'active':''}" onclick="setExamFilter('${tab}','saas')">SAAS</button><button class="type-btn ${f==='td'?'active':''}" onclick="setExamFilter('${tab}','td')">TD</button></div>
       </div></div>
     <div class="kpi-grid" style="grid-template-columns:repeat(${hasReq?5:4},1fr)">
-      <div class="kpi-card navy-card"><div class="kpi-label">Laudados (Conclusão)</div><div class="kpi-value">${fmtNum(allConc.length)}</div><div class="kpi-sub">${pLabel()}</div>${cmpHTML(allConc.length,prevConc.length)}</div>
-      ${hasReq?`<div class="kpi-card" style="border-top:3px solid var(--amber)"><div class="kpi-label">Solicitados (Entrada)</div><div class="kpi-value" style="color:var(--amber)">${fmtNum(allReq.length)}</div><div class="kpi-sub">${pLabel()}</div>${cmpHTML(allReq.length,prevReq.length)}</div>`:''}
+      <div class="kpi-card navy-card"><div class="kpi-label">Exames por data de conclusão</div><div class="kpi-value">${fmtNum(allConc.length)}</div><div class="kpi-sub">${pLabel()}</div>${cmpHTML(allConc.length,prevConc.length)}</div>
+      ${hasReq?`<div class="kpi-card" style="border-top:3px solid var(--amber)"><div class="kpi-label">Exames por data de solicitação</div><div class="kpi-value" style="color:var(--amber)">${fmtNum(allReq.length)}</div><div class="kpi-sub">${pLabel()}</div>${cmpHTML(allReq.length,prevReq.length)}</div>`:''}
       <div class="kpi-card"><div class="kpi-label">Emergências</div><div class="kpi-value">${fmtNum(em)}</div><div class="kpi-sub">${tot>0?((em/tot)*100).toFixed(1):0}% dos ${dm==='solicitacao'?'solicitados':'laudados'}</div></div>
       <div class="kpi-card cyan-card"><div class="kpi-label">Média Tempo Laudo</div><div class="kpi-value" style="font-size:24px">${fmtHMS(avgT)}</div><div class="kpi-sub">por exame</div>${avgT!==null&&prevAvg!==null?cmpHTML(avgT,prevAvg,'',true):''}</div>
       <div class="kpi-card"><div class="kpi-label">Evolução ${viewMode==='month'?'Mensal':'Semanal'}</div>${sparkHTML(trend)}</div>
