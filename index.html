@@ -873,6 +873,8 @@ async function renderRep(){
   const motivos={};repRows.forEach(r=>{const m=(r[c.motivo]||'').trim();if(m&&m!=='-')motivos[m]=(motivos[m]||0)+1});
   const topMot=Object.entries(motivos).sort((a,b)=>b[1]-a[1]);const mxM=topMot[0]?.[1]||1;
   const topCR=topN(repRows,c.central,tvN());const mxC=topCR[0]?.[1]||1;
+  const totalByCentral={};
+  all.forEach(r=>{const m=(r[c.modalidade]||'').trim();if(m==='Finalizado'||m==='Repetição'){const cn=(r[c.central]||'').trim();if(cn)totalByCentral[cn]=(totalByCentral[cn]||0)+1}});
 
   const circ=2*Math.PI*50;const off=circ-(pct/100)*circ;
 
@@ -896,8 +898,8 @@ async function renderRep(){
         <tbody>${topMot.map(([n,cnt],i)=>`<tr><td class="td-rank">${i+1}</td><td class="td-name">${esc(n)}</td><td class="td-bar"><div class="bar-bg"><div class="bar-fill" style="width:${(cnt/mxM*100).toFixed(0)}%;background:linear-gradient(90deg,#ef4444,#f87171)"></div></div></td><td class="td-count">${fmtNum(cnt)}</td><td class="td-pct">${rep>0?((cnt/rep)*100).toFixed(1):0}%</td></tr>`).join('')}</tbody></table>`}</div>
       <div class="table-card"><div class="table-card-title">🏢 Centrais com Repetições <span>(top ${tvN()})</span></div>
         ${!topCR.length?'<p style="color:var(--text-soft);font-size:13px">Sem dados.</p>':`
-        <table><thead><tr><th>#</th><th>Central</th><th style="width:80px"></th><th style="text-align:right">Qtd</th></tr></thead>
-        <tbody>${topCR.map(([n,cnt],i)=>`<tr><td class="td-rank">${i+1}</td><td class="td-name" title="${esc(n)}">${esc(n)}</td><td class="td-bar"><div class="bar-bg"><div class="bar-fill" style="width:${(cnt/mxC*100).toFixed(0)}%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div></td><td class="td-count">${fmtNum(cnt)}</td></tr>`).join('')}</tbody></table>`}</div>
+        <table><thead><tr><th>#</th><th>Central</th><th style="width:80px"></th><th style="text-align:right">Rep.</th><th style="text-align:right;padding-left:6px">% central</th></tr></thead>
+        <tbody>${topCR.map(([n,cnt],i)=>{const ctot=totalByCentral[n]||cnt;const cpct=ctot>0?(cnt/ctot*100):0;const cpctColor=cpct>5?'var(--red)':cpct>2?'var(--amber)':'var(--green)';return`<tr><td class="td-rank">${i+1}</td><td class="td-name" title="${esc(n)}">${esc(n)}</td><td class="td-bar"><div class="bar-bg"><div class="bar-fill" style="width:${(cnt/mxC*100).toFixed(0)}%;background:linear-gradient(90deg,#f59e0b,#fbbf24)"></div></div></td><td class="td-count">${fmtNum(cnt)}</td><td class="td-pct" style="color:${cpctColor}">${cpct.toFixed(1)}%</td></tr>`}).join('')}</tbody></table>`}</div>
     </div>`;
 }
 
