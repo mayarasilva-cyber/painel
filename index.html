@@ -474,7 +474,7 @@ let carouselActive=false,carouselPaused=false,carouselTimer=null,carouselProgres
   buildWeekOpts();
   document.getElementById('selWeek').addEventListener('change',e=>{selWeek=+e.target.value;loadTab(currentTab)});
   preloadAll();
-  setInterval(()=>{cache={};preloadAll()},5*60*1000);
+  setInterval(silentRefresh,5*60*1000);
 })();
 
 function buildWeekOpts(){
@@ -516,6 +516,14 @@ async function preloadAll(){
   const keys=['HOLTER','HOLTER_IEM','REPETICAO','MAPA','ECG','CHAMADOS','FINANCEIRO','NCTS','LOCALIDADE','AVISOS','ANIVERSARIANTES','ANIVERSARIANTES'];
   const results=await Promise.allSettled(keys.map(k=>fetchData(k)));
   results.forEach((r,i)=>{if(r.status==='rejected')console.warn(keys[i]+' falhou:',r.reason)});
+  loadTab(currentTab);
+}
+
+async function silentRefresh(){
+  const keys=['HOLTER','HOLTER_IEM','REPETICAO','MAPA','ECG','CHAMADOS','FINANCEIRO','NCTS','LOCALIDADE','AVISOS','ANIVERSARIANTES'];
+  const saved={};
+  keys.forEach(k=>{if(cache[k])saved[k]=cache[k];delete cache[k]});
+  await Promise.allSettled(keys.map(k=>fetchData(k).catch(()=>{if(saved[k]&&!cache[k])cache[k]=saved[k]})));
   loadTab(currentTab);
 }
 
@@ -580,8 +588,9 @@ function tvN(){return carouselActive?5:8}
 
 function cmpHTML(cur,prev,sfx='',invert=false){
   if(prev===0||prev===null)return'<div class="cmp neutral">— sem dados ant.</div>';
-  const p=((cur-prev)/prev*100);const up=invert?p<0:p>0;const dn=invert?p>0:p<0;
-  const cls=up?'up':dn?'down':'neutral';const ar=up?'↑':dn?'↓':'→';
+  const p=((cur-prev)/prev*100);
+  const ar=p>0?'↑':p<0?'↓':'→';
+  const cls=p===0?'neutral':(invert?(p>0?'down':'up'):(p>0?'up':'down'));
   let ref;
   if(viewMode==='week'){
     const{startDate}=getWeekRange();
