@@ -1404,10 +1404,10 @@ async function renderLocalidade(){
         const [cx,cy]=pathGen.centroid(f);
         if(!isNaN(cx)&&!isNaN(cy)){
           const big=v.count>=maxCount*0.2;
-          const fillUF='#ffffff';
-          const fillNum=carouselActive?'#7dd3fc':'#ffffff';
-          labels+=`<text x="${cx.toFixed(1)}" y="${(cy-2).toFixed(1)}" text-anchor="middle" font-family="Nunito,sans-serif" font-size="${big?11:9}" font-weight="800" fill="${fillUF}" stroke="${strokeCol}" stroke-width="2.5" paint-order="stroke">${uf}</text>`;
-          labels+=`<text x="${cx.toFixed(1)}" y="${(cy+11).toFixed(1)}" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="${big?14:10}" font-weight="800" fill="${fillNum}" stroke="${strokeCol}" stroke-width="2.5" paint-order="stroke">${v.count}</text>`;
+          const sk=carouselActive?'rgba(0,0,0,0.55)':'rgba(255,255,255,0.7)';
+          const sw=big?2:1.5;
+          labels+=`<text x="${cx.toFixed(1)}" y="${(cy-1).toFixed(1)}" text-anchor="middle" font-family="Nunito,sans-serif" font-size="${big?10:8}" font-weight="800" fill="#ffffff" stroke="${sk}" stroke-width="${sw}" paint-order="stroke">${uf}</text>`;
+          labels+=`<text x="${cx.toFixed(1)}" y="${(cy+10).toFixed(1)}" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="${big?13:9}" font-weight="800" fill="#ffffff" stroke="${sk}" stroke-width="${sw}" paint-order="stroke">${v.count}</text>`;
         }
       }
     });
