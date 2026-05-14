@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Painel Indicadores — ECGNow</title>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
 <style>
 /* ─── VARIABLES ─── */
 :root{--navy:#0D2137;--navy-mid:#1B6CA8;--navy-light:#1e3a5f;--cyan:#0ea5e9;--cyan-light:#e0f2fe;--bg:#f0f5fa;--white:#fff;--text:#1e293b;--text-soft:#64748b;--border:#e2e8f0;--green:#10b981;--green-bg:#d1fae5;--red:#ef4444;--red-bg:#fee2e2;--amber:#f59e0b;--amber-bg:#fef3c7;--shadow:0 1px 3px rgba(0,0,0,.07),0 1px 2px rgba(0,0,0,.04);--shadow-md:0 4px 12px rgba(0,0,0,.08)}
@@ -1358,7 +1359,6 @@ async function renderLocalidade(){
       if(city)byUF[uf].cities[city]=(byUF[uf].cities[city]||0)+1;
     }
   });
-  // Separar clientes internacionais (UF não reconhecida como estado brasileiro)
   const byIntl={};
   Object.keys(byUF).filter(uf=>!UF_NAMES[uf]).forEach(uf=>{byIntl[uf]=byUF[uf];delete byUF[uf]});
 
@@ -1368,44 +1368,60 @@ async function renderLocalidade(){
   const numCities=Object.values(byUF).reduce((s,v)=>s+Object.keys(v.cities).length,0);
   const intlTotal=Object.values(byIntl).reduce((s,v)=>s+v.count,0);
 
-  let svgHTML=BRAZIL_SVG_PATHS;
-  Object.entries(byUF).forEach(([uf,v])=>{
-    const ratio=v.count/maxCount;
-    const color=mapColor(ratio);
-    const glow=ratio>0.4?`filter:drop-shadow(0 0 ${Math.round(ratio*10)}px rgba(14,165,233,${(ratio*0.5).toFixed(2)}))`:''
-    svgHTML=svgHTML.replace(`id="uf-${uf}"`,`id="uf-${uf}" fill="${color}" style="${glow}"`);
-  });
-  Object.keys(UF_NAMES).forEach(uf=>{
-    if(!byUF[uf])svgHTML=svgHTML.replace(`id="uf-${uf}"`,`id="uf-${uf}" fill="${mapColor(0)}"`);
-  });
-
-  let labels='';
-  Object.entries(UF_CENTERS).forEach(([uf,[x,y]])=>{
-    const count=byUF[uf]?.count||0;
-    if(count>0){
-      const big=count>=maxCount*0.2;
-      const strokeCol=carouselActive?'#050d1a':'#f0f5fa';
-      const fillUF='#ffffff';
-      const fillNum=carouselActive?'#7dd3fc':'#ffffff';
-      labels+=`<text x="${x}" y="${y-2}" text-anchor="middle" font-family="Nunito,sans-serif" font-size="${big?11:9}" font-weight="800" fill="${fillUF}" stroke="${strokeCol}" stroke-width="2.5" paint-order="stroke">${uf}</text>`;
-      labels+=`<text x="${x}" y="${y+11}" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="${big?14:10}" font-weight="800" fill="${fillNum}" stroke="${strokeCol}" stroke-width="2.5" paint-order="stroke">${count}</text>`;
-    }
-  });
-  // Badge da Alemanha / Internacional no canto superior direito do SVG
-  if(intlTotal>0){
-    const bg=carouselActive?'rgba(139,92,246,.25)':'rgba(139,92,246,.12)';
-    const border=carouselActive?'#a78bfa':'#8b5cf6';
-    const sk=carouselActive?'#050d1a':'#f0f5fa';
-    const txtCol=carouselActive?'#c4b5fd':'#7c3aed';
-    const lbl=carouselActive?'#94a3b8':'#6b7280';
-    labels+=`<g>
-      <rect x="374" y="6" width="72" height="38" rx="6" fill="${bg}" stroke="${border}" stroke-width="1.2"/>
-      <text x="410" y="18" text-anchor="middle" font-family="Nunito,sans-serif" font-size="7.5" font-weight="800" fill="${lbl}" letter-spacing="0.8">INTERNACIONAL</text>
-      <text x="410" y="29" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9.5" font-weight="800" fill="${txtCol}" stroke="${sk}" stroke-width="2" paint-order="stroke">DE - Alemanha</text>
-      <text x="410" y="40" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="11" font-weight="800" fill="${border}" stroke="${sk}" stroke-width="2" paint-order="stroke">${intlTotal} cliente${intlTotal!==1?'s':''}</text>
-    </g>`;
+  if(!cache._brGeo){
+    try{
+      const r=await fetch('https://raw.githubusercontent.com/giuliano-macedo/geodata-br-states/main/geojson/br_states.json');
+      cache._brGeo=await r.json();
+    }catch(e){console.warn('GeoJSON BR não carregado',e)}
   }
-  svgHTML=svgHTML.replace('</svg>',labels+'</svg>');
+
+  const W=450,H=460;
+  let svgHTML='';
+  if(cache._brGeo&&typeof d3!=='undefined'){
+    const brBbox={type:'Feature',geometry:{type:'Polygon',coordinates:[[[-74,-34],[-28.5,-34],[-28.5,5.5],[-74,5.5],[-74,-34]]]}};
+    const projection=d3.geoMercator().fitExtent([[10,5],[W-10,H-5]],brBbox);
+    const pathGen=d3.geoPath().projection(projection);
+    const strokeCol=carouselActive?'#050d1a':'#f0f5fa';
+
+    let paths='',labels='';
+    cache._brGeo.features.forEach(f=>{
+      const uf=(f.properties.SIGLA||f.properties.sigla||'').toUpperCase();
+      const v=byUF[uf];
+      const ratio=v?v.count/maxCount:0;
+      const fill=mapColor(ratio);
+      const glow=ratio>0.4?`filter:drop-shadow(0 0 ${Math.round(ratio*10)}px rgba(14,165,233,${(ratio*0.5).toFixed(2)}))`:''
+      const d=pathGen(f)||'';
+      paths+=`<path id="uf-${uf}" d="${d}" fill="${fill}" stroke="${carouselActive?'#0a1628':'#cbd5e1'}" stroke-width="0.6" style="${glow}"/>`;
+      if(v&&v.count>0){
+        const [cx,cy]=pathGen.centroid(f);
+        if(!isNaN(cx)&&!isNaN(cy)){
+          const big=v.count>=maxCount*0.2;
+          const fillUF='#ffffff';
+          const fillNum=carouselActive?'#7dd3fc':'#ffffff';
+          labels+=`<text x="${cx.toFixed(1)}" y="${(cy-2).toFixed(1)}" text-anchor="middle" font-family="Nunito,sans-serif" font-size="${big?11:9}" font-weight="800" fill="${fillUF}" stroke="${strokeCol}" stroke-width="2.5" paint-order="stroke">${uf}</text>`;
+          labels+=`<text x="${cx.toFixed(1)}" y="${(cy+11).toFixed(1)}" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="${big?14:10}" font-weight="800" fill="${fillNum}" stroke="${strokeCol}" stroke-width="2.5" paint-order="stroke">${v.count}</text>`;
+        }
+      }
+    });
+
+    if(intlTotal>0){
+      const bg=carouselActive?'rgba(139,92,246,.25)':'rgba(139,92,246,.12)';
+      const border=carouselActive?'#a78bfa':'#8b5cf6';
+      const sk=carouselActive?'#050d1a':'#f0f5fa';
+      const txtCol=carouselActive?'#c4b5fd':'#7c3aed';
+      const lbl=carouselActive?'#94a3b8':'#6b7280';
+      labels+=`<g>
+        <rect x="374" y="6" width="72" height="38" rx="6" fill="${bg}" stroke="${border}" stroke-width="1.2"/>
+        <text x="410" y="18" text-anchor="middle" font-family="Nunito,sans-serif" font-size="7.5" font-weight="800" fill="${lbl}" letter-spacing="0.8">INTERNACIONAL</text>
+        <text x="410" y="29" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9.5" font-weight="800" fill="${txtCol}" stroke="${sk}" stroke-width="2" paint-order="stroke">DE - Alemanha</text>
+        <text x="410" y="40" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="11" font-weight="800" fill="${border}" stroke="${sk}" stroke-width="2" paint-order="stroke">${intlTotal} cliente${intlTotal!==1?'s':''}</text>
+      </g>`;
+    }
+
+    svgHTML=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">${paths}${labels}</svg>`;
+  } else {
+    svgHTML=`<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-soft);font-size:14px">Carregando mapa…</div>`;
+  }
 
   const rankN=carouselActive?10:12;
   const rankHTML=sortedUFs.slice(0,rankN).map(([uf,v],i)=>{
