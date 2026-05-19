@@ -404,6 +404,17 @@ body.tv-mode .fin-sub{color:#94a3b8;font-size:14px}
 body.tv-mode .fin-realizado{border-color:#1a2744;color:#94a3b8;font-size:14px}
 body.tv-mode .fin-realizado strong{color:#e2e8f0}
 
+/* ─── PRESENCE STAT CARDS ─── */
+.presence-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px}
+.presence-stat-card{background:var(--white);border-radius:10px;border:1px solid var(--border);padding:12px 18px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
+.presence-stat-icon{font-size:24px;line-height:1;flex-shrink:0}
+.presence-stat-info{display:flex;flex-direction:column;gap:1px}
+.presence-stat-val{font-size:24px;font-weight:800;color:var(--navy);line-height:1.1}
+.presence-stat-label{font-size:10px;font-weight:800;color:var(--text-soft);text-transform:uppercase;letter-spacing:.7px}
+body.tv-mode .presence-stat-card{background:#101b2e;border-color:#1a2744}
+body.tv-mode .presence-stat-val{color:#e2e8f0;font-size:26px}
+body.tv-mode .presence-stat-label{color:#64748b;font-size:11px}
+
 /* ─── BRANCH TAGS ─── */
 .branch-tag{display:inline-block;background:rgba(14,165,233,.08);color:var(--navy-mid);border:1px solid rgba(14,165,233,.25);border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;margin:1px 2px;white-space:nowrap;letter-spacing:.3px}
 .branch-count-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--cyan);color:#fff;border-radius:20px;font-size:11px;font-weight:800;min-width:22px;height:22px;padding:0 6px}
@@ -1484,7 +1495,13 @@ async function renderLocalidade(){
   const totalGeral=totalClientes+intlTotal;
   document.getElementById('mainContent').innerHTML=`
     ${tvBadge()}
-    <div class="section-bar"><div style="display:flex;align-items:center;gap:14px"><div class="section-title">📍 Presença</div><div class="section-sub">${totalGeral} clientes · ${numStates} estados · ${numCities} cidades${totalBranches>0?' · 🏢 '+fmtNum(totalBranches)+' centrais':''}${intlTotal>0?' · 🌍 '+intlTotal+' internacional':''}</div></div></div>
+    <div class="section-bar"><div class="section-title">📍 Presença</div></div>
+    <div class="presence-stats">
+      <div class="presence-stat-card"><div class="presence-stat-icon">👥</div><div class="presence-stat-info"><div class="presence-stat-val">${fmtNum(totalGeral)}</div><div class="presence-stat-label">Clientes</div></div></div>
+      <div class="presence-stat-card"><div class="presence-stat-icon">🗺️</div><div class="presence-stat-info"><div class="presence-stat-val">${numStates}</div><div class="presence-stat-label">Estados</div></div></div>
+      <div class="presence-stat-card"><div class="presence-stat-icon">🏙️</div><div class="presence-stat-info"><div class="presence-stat-val">${fmtNum(numCities)}</div><div class="presence-stat-label">Cidades</div></div></div>
+      <div class="presence-stat-card"><div class="presence-stat-icon">🏢</div><div class="presence-stat-info"><div class="presence-stat-val">${fmtNum(totalBranches)||'—'}</div><div class="presence-stat-label">Centrais</div></div></div>
+    </div>
     <div class="map-layout">
       <div class="map-container">${svgHTML}</div>
       <div class="map-sidebar">
