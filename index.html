@@ -404,6 +404,13 @@ body.tv-mode .fin-sub{color:#94a3b8;font-size:14px}
 body.tv-mode .fin-realizado{border-color:#1a2744;color:#94a3b8;font-size:14px}
 body.tv-mode .fin-realizado strong{color:#e2e8f0}
 
+/* ─── BRANCH TAGS ─── */
+.branch-tag{display:inline-block;background:rgba(14,165,233,.08);color:var(--navy-mid);border:1px solid rgba(14,165,233,.25);border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;margin:1px 2px;white-space:nowrap;letter-spacing:.3px}
+.branch-count-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--cyan);color:#fff;border-radius:20px;font-size:11px;font-weight:800;min-width:22px;height:22px;padding:0 6px}
+.centrais-org-name{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+body.tv-mode .branch-tag{background:rgba(56,189,248,.12);color:#7dd3fc;border-color:rgba(56,189,248,.28)}
+body.tv-mode .branch-count-badge{background:#0ea5e9}
+
 /* ─── RESPONSIVE ─── */
 @media(max-width:960px){.tables-grid,.split-row,.fin-grid,.fin-tables-grid{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}.overview-grid{grid-template-columns:1fr 1fr}.main{padding:16px}.header{padding:0 16px}.tab-nav{padding:0 16px}}
 @media(max-width:600px){.overview-grid{grid-template-columns:1fr}}
@@ -440,7 +447,7 @@ body.tv-mode .fin-realizado strong{color:#e2e8f0}
 //  CONFIG — CSV direto do Google Sheets (CDN, sem proxy)
 // ═══════════════════════════════════════════════
 const CSV_BASE='https://docs.google.com/spreadsheets/d/e/2PACX-1vTcbbHtFlaA3tt8Mv1NF22YPbetZRLM9chO6G1gqWSpO2RSPQu_7Gzi_V4RINu_CYG-tGCQI4evg3RF/pub?single=true&output=csv&gid=';
-const CSV_GIDS={HOLTER:'0',HOLTER_IEM:'935984391',REPETICAO:'65846932',MAPA:'1563131554',ECG:'135941513',CHAMADOS:'1748165610',FINANCEIRO:'558473626',LOCALIDADE:'1098931569',AVISOS:'2139582642',NCTS:'1774453101',ANIVERSARIANTES:'1697503541'};
+const CSV_GIDS={HOLTER:'0',HOLTER_IEM:'935984391',REPETICAO:'65846932',MAPA:'1563131554',ECG:'135941513',CHAMADOS:'1748165610',FINANCEIRO:'558473626',LOCALIDADE:'1098931569',AVISOS:'2139582642',NCTS:'1774453101',ANIVERSARIANTES:'1697503541',CENTRAIS:'1487541184'};
 
 const COLS={
   HOLTER:{date:2,dateReq:1,emerg:0,tempo:4,central:7},
@@ -513,14 +520,14 @@ async function fetchData(key){
 
 async function preloadAll(){
   document.getElementById('mainContent').innerHTML='<div class="loading"><div class="spinner"></div><span class="loading-text">Carregando dados…</span></div>';
-  const keys=['HOLTER','HOLTER_IEM','REPETICAO','MAPA','ECG','CHAMADOS','FINANCEIRO','NCTS','LOCALIDADE','AVISOS','ANIVERSARIANTES','ANIVERSARIANTES'];
+  const keys=['HOLTER','HOLTER_IEM','REPETICAO','MAPA','ECG','CHAMADOS','FINANCEIRO','NCTS','LOCALIDADE','AVISOS','ANIVERSARIANTES','ANIVERSARIANTES','CENTRAIS'];
   const results=await Promise.allSettled(keys.map(k=>fetchData(k)));
   results.forEach((r,i)=>{if(r.status==='rejected')console.warn(keys[i]+' falhou:',r.reason)});
   loadTab(currentTab);
 }
 
 async function silentRefresh(){
-  const keys=['HOLTER','HOLTER_IEM','REPETICAO','MAPA','ECG','CHAMADOS','FINANCEIRO','NCTS','LOCALIDADE','AVISOS','ANIVERSARIANTES'];
+  const keys=['HOLTER','HOLTER_IEM','REPETICAO','MAPA','ECG','CHAMADOS','FINANCEIRO','NCTS','LOCALIDADE','AVISOS','ANIVERSARIANTES','CENTRAIS'];
   const saved={};
   keys.forEach(k=>{if(cache[k])saved[k]=cache[k];delete cache[k]});
   await Promise.allSettled(keys.map(k=>fetchData(k).catch(()=>{if(saved[k]&&!cache[k])cache[k]=saved[k]})));
@@ -1358,7 +1365,7 @@ function mapColor(ratio){
 }
 
 async function renderLocalidade(){
-  const{data}=await fetchData('LOCALIDADE');
+  const[{data},{data:centraisRaw}]=await Promise.all([fetchData('LOCALIDADE'),fetchData('CENTRAIS').catch(()=>({data:[]}))]);
   const totalClientes=data.length;
   const byUF={};
   data.forEach(r=>{
@@ -1461,6 +1468,19 @@ async function renderLocalidade(){
         </div>`;}).join('')}
     </div>`:'';
 
+  const orgBranches={};
+  (centraisRaw||[]).forEach(r=>{
+    const org=(r[0]||'').trim();const bStr=(r[1]||'').trim();
+    if(!org||!bStr)return;
+    const branches=bStr.split(/[;,]/).map(b=>b.trim()).filter(b=>b);
+    if(branches.length)orgBranches[org]=branches;
+  });
+  const totalBranches=Object.values(orgBranches).reduce((s,v)=>s+v.length,0);
+  const totalOrgsC=Object.keys(orgBranches).length;
+  const multiOrgs=Object.values(orgBranches).filter(v=>v.length>1).length;
+  const sortedOrgs=Object.entries(orgBranches).sort((a,b)=>b[1].length-a[1].length);
+  const topOrgsN=carouselActive?8:15;
+
   const totalGeral=totalClientes+intlTotal;
   document.getElementById('mainContent').innerHTML=`
     ${tvBadge()}
@@ -1479,7 +1499,29 @@ async function renderLocalidade(){
           ${intlRankHTML}
         </div>
       </div>
-    </div>`;
+    </div>
+    ${totalBranches>0?`
+    <div class="section-bar" style="margin-top:20px"><div style="display:flex;align-items:center;gap:14px"><div class="section-title">🏢 Centrais</div><div class="section-sub">${fmtNum(totalBranches)} centrais · ${fmtNum(totalOrgsC)} organizações · média ${totalOrgsC>0?(totalBranches/totalOrgsC).toFixed(1):0}/org</div></div></div>
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
+      <div class="kpi-card navy-card"><div class="kpi-label">Total de Centrais</div><div class="kpi-value">${fmtNum(totalBranches)}</div><div class="kpi-sub">filiais cadastradas</div></div>
+      <div class="kpi-card"><div class="kpi-label">Organizações Ativas</div><div class="kpi-value">${fmtNum(totalOrgsC)}</div><div class="kpi-sub">${totalOrgsC>0?(totalBranches/totalOrgsC).toFixed(1):0} centrais por org em média</div></div>
+      <div class="kpi-card" style="border-top:3px solid var(--amber)"><div class="kpi-label">Com Múltiplas Centrais</div><div class="kpi-value" style="color:var(--amber)">${fmtNum(multiOrgs)}</div><div class="kpi-sub">${totalOrgsC>0?(multiOrgs/totalOrgsC*100).toFixed(0):0}% das organizações</div></div>
+    </div>
+    <div class="table-card" style="margin-bottom:16px">
+      <div class="table-card-title">🏆 Organizações por Número de Centrais <span>(top ${topOrgsN})</span></div>
+      <table>
+        <thead><tr><th>#</th><th>Organização</th><th style="text-align:center;width:70px">Centrais</th><th>Filiais</th></tr></thead>
+        <tbody>${sortedOrgs.slice(0,topOrgsN).map(([name,branches],i)=>`
+          <tr>
+            <td class="td-rank">${i+1}</td>
+            <td class="td-name centrais-org-name" title="${esc(name)}">${esc(name)}</td>
+            <td style="text-align:center"><span class="branch-count-badge">${branches.length}</span></td>
+            <td style="padding:5px 8px">${branches.map(b=>`<span class="branch-tag">${esc(b)}</span>`).join('')}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`:''}
+  `;
 }
 // ═══════════════════════════════════════════════
 //  RENDER: AVISOS (Quadro de avisos da TV)
