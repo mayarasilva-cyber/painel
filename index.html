@@ -1500,7 +1500,7 @@ async function renderLocalidade(){
       <div class="presence-stat-card"><div class="presence-stat-icon">🗺️</div><div class="presence-stat-info"><div class="presence-stat-val">${numStates}</div><div class="presence-stat-label">Estados</div></div></div>
       <div class="presence-stat-card"><div class="presence-stat-icon">🏙️</div><div class="presence-stat-info"><div class="presence-stat-val">${fmtNum(numCities)}</div><div class="presence-stat-label">Cidades</div></div></div>
       <div class="presence-stat-card"><div class="presence-stat-icon">🏢</div><div class="presence-stat-info"><div class="presence-stat-val">${fmtNum(totalBranches)||'—'}</div><div class="presence-stat-label">Centrais</div></div></div>
-      <div class="presence-stat-card"><div class="presence-stat-icon">🌍</div><div class="presence-stat-info"><div class="presence-stat-val">${1+(intlTotal>0?Object.keys(byIntl).length:0)}</div><div class="presence-stat-label">Países</div></div></div>
+      <div class="presence-stat-card"><div class="presence-stat-icon">🌍</div><div class="presence-stat-info"><div class="presence-stat-val">${1+Math.max(1,Object.keys(byIntl).length)}</div><div class="presence-stat-label">Países</div></div></div>
     </div>
     <div class="map-layout">
       <div class="map-container">${svgHTML}</div>
