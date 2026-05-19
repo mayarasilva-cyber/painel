@@ -1466,7 +1466,7 @@ async function renderLocalidade(){
     deInsetHTML=`<div class="de-inset">
       <div class="de-inset-header">🇩🇪 Alemanha</div>
       <svg viewBox="0 0 ${DW} ${DH}" style="width:100%;display:block"><path d="${dePath}" fill="${fill}" stroke="${border}" stroke-width="1"/>${dot}</svg>
-      <div class="de-inset-count">1 cliente · Teltow</div>
+      <div class="de-inset-count">${intlTotal>0?intlTotal:1} cliente${(intlTotal>1)?'s':''} · Teltow</div>
     </div>`;
   }
 
