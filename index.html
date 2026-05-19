@@ -1484,7 +1484,7 @@ async function renderLocalidade(){
   const totalGeral=totalClientes+intlTotal;
   document.getElementById('mainContent').innerHTML=`
     ${tvBadge()}
-    <div class="section-bar"><div style="display:flex;align-items:center;gap:14px"><div class="section-title">📍 Presença</div><div class="section-sub">${totalGeral} clientes · ${numStates} estados · ${numCities} cidades${intlTotal>0?' · 🌍 '+intlTotal+' internacional':''}</div></div></div>
+    <div class="section-bar"><div style="display:flex;align-items:center;gap:14px"><div class="section-title">📍 Presença</div><div class="section-sub">${totalGeral} clientes · ${numStates} estados · ${numCities} cidades${totalBranches>0?' · 🏢 '+fmtNum(totalBranches)+' centrais':''}${intlTotal>0?' · 🌍 '+intlTotal+' internacional':''}</div></div></div>
     <div class="map-layout">
       <div class="map-container">${svgHTML}</div>
       <div class="map-sidebar">
@@ -1499,29 +1499,7 @@ async function renderLocalidade(){
           ${intlRankHTML}
         </div>
       </div>
-    </div>
-    ${totalBranches>0?`
-    <div class="section-bar" style="margin-top:20px"><div style="display:flex;align-items:center;gap:14px"><div class="section-title">🏢 Centrais</div><div class="section-sub">${fmtNum(totalBranches)} centrais · ${fmtNum(totalOrgsC)} organizações · média ${totalOrgsC>0?(totalBranches/totalOrgsC).toFixed(1):0}/org</div></div></div>
-    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">
-      <div class="kpi-card navy-card"><div class="kpi-label">Total de Centrais</div><div class="kpi-value">${fmtNum(totalBranches)}</div><div class="kpi-sub">filiais cadastradas</div></div>
-      <div class="kpi-card"><div class="kpi-label">Organizações Ativas</div><div class="kpi-value">${fmtNum(totalOrgsC)}</div><div class="kpi-sub">${totalOrgsC>0?(totalBranches/totalOrgsC).toFixed(1):0} centrais por org em média</div></div>
-      <div class="kpi-card" style="border-top:3px solid var(--amber)"><div class="kpi-label">Com Múltiplas Centrais</div><div class="kpi-value" style="color:var(--amber)">${fmtNum(multiOrgs)}</div><div class="kpi-sub">${totalOrgsC>0?(multiOrgs/totalOrgsC*100).toFixed(0):0}% das organizações</div></div>
-    </div>
-    <div class="table-card" style="margin-bottom:16px">
-      <div class="table-card-title">🏆 Organizações por Número de Centrais <span>(top ${topOrgsN})</span></div>
-      <table>
-        <thead><tr><th>#</th><th>Organização</th><th style="text-align:center;width:70px">Centrais</th><th>Filiais</th></tr></thead>
-        <tbody>${sortedOrgs.slice(0,topOrgsN).map(([name,branches],i)=>`
-          <tr>
-            <td class="td-rank">${i+1}</td>
-            <td class="td-name centrais-org-name" title="${esc(name)}">${esc(name)}</td>
-            <td style="text-align:center"><span class="branch-count-badge">${branches.length}</span></td>
-            <td style="padding:5px 8px">${branches.map(b=>`<span class="branch-tag">${esc(b)}</span>`).join('')}</td>
-          </tr>`).join('')}
-        </tbody>
-      </table>
-    </div>`:''}
-  `;
+    </div>`;
 }
 // ═══════════════════════════════════════════════
 //  RENDER: AVISOS (Quadro de avisos da TV)
