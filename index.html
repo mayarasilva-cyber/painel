@@ -415,6 +415,14 @@ body.tv-mode .presence-stat-card{background:#101b2e;border-color:#1a2744}
 body.tv-mode .presence-stat-val{color:#e2e8f0;font-size:26px}
 body.tv-mode .presence-stat-label{color:#64748b;font-size:11px}
 
+/* ─── GERMANY INSET ─── */
+.de-inset{position:absolute;bottom:14px;right:14px;width:114px;background:var(--white);border:1px solid rgba(139,92,246,.28);border-radius:10px;padding:8px;box-shadow:var(--shadow-md);z-index:10}
+.de-inset-header{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.8px;color:#7c3aed;margin-bottom:4px;text-align:center}
+.de-inset-count{font-size:10px;font-weight:700;color:#8b5cf6;text-align:center;margin-top:4px}
+body.tv-mode .de-inset{background:#111b30;border-color:rgba(167,139,250,.35);box-shadow:0 4px 16px rgba(0,0,0,.4)}
+body.tv-mode .de-inset-header{color:#c4b5fd}
+body.tv-mode .de-inset-count{color:#a78bfa}
+
 /* ─── BRANCH TAGS ─── */
 .branch-tag{display:inline-block;background:rgba(14,165,233,.08);color:var(--navy-mid);border:1px solid rgba(14,165,233,.25);border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;margin:1px 2px;white-space:nowrap;letter-spacing:.3px}
 .branch-count-badge{display:inline-flex;align-items:center;justify-content:center;background:var(--cyan);color:#fff;border-radius:20px;font-size:11px;font-weight:800;min-width:22px;height:22px;padding:0 6px}
@@ -1397,6 +1405,13 @@ async function renderLocalidade(){
   const numCities=Object.values(byUF).reduce((s,v)=>s+Object.keys(v.cities).length,0);
   const intlTotal=Object.values(byIntl).reduce((s,v)=>s+v.count,0);
 
+  if(intlTotal>0&&!cache._deGeo){
+    try{
+      const r=await fetch('https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/main/1_deutschland/4_niedrig.geo.json');
+      cache._deGeo=await r.json();
+    }catch(e){console.warn('GeoJSON DE não carregado',e)}
+  }
+
   if(!cache._brGeo){
     try{
       const r=await fetch('https://raw.githubusercontent.com/giuliano-macedo/geodata-br-states/main/geojson/br_states.json');
@@ -1430,24 +1445,29 @@ async function renderLocalidade(){
       }
     });
 
-    if(intlTotal>0){
-      const bg=carouselActive?'rgba(139,92,246,.25)':'rgba(139,92,246,.12)';
-      const border=carouselActive?'#a78bfa':'#8b5cf6';
-      const sk=carouselActive?'rgba(5,15,30,0.7)':'rgba(5,15,30,0.35)';
-      const txtCol=carouselActive?'#c4b5fd':'#7c3aed';
-      const lbl=carouselActive?'#94a3b8':'#6b7280';
-      labels+=`<g>
-        <rect x="362" y="4" width="84" height="46" rx="7" fill="${bg}" stroke="${border}" stroke-width="1.2"/>
-        <text x="404" y="16" text-anchor="middle" font-family="Nunito,sans-serif" font-size="7" font-weight="800" fill="${lbl}" letter-spacing="0.8">INTERNACIONAL</text>
-        <text x="404" y="27" text-anchor="middle" font-family="Nunito,sans-serif" font-size="9" font-weight="800" fill="${txtCol}" stroke="${sk}" stroke-width="2" paint-order="stroke">🇩🇪 Teltow, DE</text>
-        <text x="404" y="38" text-anchor="middle" font-family="Nunito,sans-serif" font-size="8.5" font-weight="700" fill="${lbl}">Alemanha</text>
-        <text x="404" y="47" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-size="10" font-weight="800" fill="${border}" stroke="${sk}" stroke-width="1.5" paint-order="stroke">${intlTotal} cliente${intlTotal!==1?'s':''}</text>
-      </g>`;
-    }
+    // badge SVG removido — substituído pelo inset HTML abaixo
 
     svgHTML=`<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;display:block">${paths}${labels}</svg>`;
   } else {
     svgHTML=`<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--text-soft);font-size:14px">Carregando mapa…</div>`;
+  }
+
+  let deInsetHTML='';
+  if(intlTotal>0&&cache._deGeo&&typeof d3!=='undefined'){
+    const DW=100,DH=115;
+    const deProj=d3.geoMercator().fitExtent([[3,3],[DW-3,DH-3]],cache._deGeo);
+    const dePG=d3.geoPath().projection(deProj);
+    const dePath=dePG(cache._deGeo)||'';
+    const fill=carouselActive?'rgba(139,92,246,.35)':'rgba(139,92,246,.18)';
+    const border=carouselActive?'#a78bfa':'#8b5cf6';
+    const sk=carouselActive?'rgba(5,15,30,0.65)':'rgba(5,15,30,0.3)';
+    const [tx,ty]=deProj([13.27,52.4]);
+    const dot=(!isNaN(tx)&&!isNaN(ty))?`<circle cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" r="4" fill="#ef4444" stroke="#fff" stroke-width="1.5"/><text x="${tx.toFixed(1)}" y="${(ty-7).toFixed(1)}" text-anchor="middle" font-family="Nunito,sans-serif" font-size="7.5" font-weight="800" fill="${carouselActive?'#e2e8f0':'#1e293b'}" stroke="${sk}" stroke-width="1.5" paint-order="stroke">Teltow</text>`:'';
+    deInsetHTML=`<div class="de-inset">
+      <div class="de-inset-header">🇩🇪 Alemanha</div>
+      <svg viewBox="0 0 ${DW} ${DH}" style="width:100%;display:block"><path d="${dePath}" fill="${fill}" stroke="${border}" stroke-width="1"/>${dot}</svg>
+      <div class="de-inset-count">${intlTotal} cliente${intlTotal!==1?'s':''}</div>
+    </div>`;
   }
 
   const rankN=carouselActive?10:12;
@@ -1503,7 +1523,7 @@ async function renderLocalidade(){
       <div class="presence-stat-card"><div class="presence-stat-icon">🌍</div><div class="presence-stat-info"><div class="presence-stat-val">${1+Math.max(1,Object.keys(byIntl).length)}</div><div class="presence-stat-label">Países</div></div></div>
     </div>
     <div class="map-layout">
-      <div class="map-container">${svgHTML}</div>
+      <div class="map-container">${svgHTML}${deInsetHTML}</div>
       <div class="map-sidebar">
         <div class="map-legend">
           <div class="map-legend-title">Concentração de Clientes</div>
