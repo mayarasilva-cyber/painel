@@ -1405,7 +1405,7 @@ async function renderLocalidade(){
   const numCities=Object.values(byUF).reduce((s,v)=>s+Object.keys(v.cities).length,0);
   const intlTotal=Object.values(byIntl).reduce((s,v)=>s+v.count,0);
 
-  if(intlTotal>0&&!cache._deGeo){
+  if(!cache._deGeo){
     try{
       const r=await fetch('https://raw.githubusercontent.com/isellsoap/deutschlandGeoJSON/main/1_deutschland/4_niedrig.geo.json');
       cache._deGeo=await r.json();
@@ -1453,7 +1453,7 @@ async function renderLocalidade(){
   }
 
   let deInsetHTML='';
-  if(intlTotal>0&&cache._deGeo&&typeof d3!=='undefined'){
+  if(cache._deGeo&&typeof d3!=='undefined'){
     const DW=100,DH=115;
     const deProj=d3.geoMercator().fitExtent([[3,3],[DW-3,DH-3]],cache._deGeo);
     const dePG=d3.geoPath().projection(deProj);
@@ -1466,7 +1466,7 @@ async function renderLocalidade(){
     deInsetHTML=`<div class="de-inset">
       <div class="de-inset-header">🇩🇪 Alemanha</div>
       <svg viewBox="0 0 ${DW} ${DH}" style="width:100%;display:block"><path d="${dePath}" fill="${fill}" stroke="${border}" stroke-width="1"/>${dot}</svg>
-      <div class="de-inset-count">${intlTotal} cliente${intlTotal!==1?'s':''}</div>
+      <div class="de-inset-count">1 cliente · Teltow</div>
     </div>`;
   }
 
