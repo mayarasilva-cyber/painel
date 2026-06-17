@@ -468,74 +468,6 @@ body.tv-mode .branch-count-badge{background:#0ea5e9}
 const CSV_BASE='https://docs.google.com/spreadsheets/d/e/2PACX-1vTcbbHtFlaA3tt8Mv1NF22YPbetZRLM9chO6G1gqWSpO2RSPQu_7Gzi_V4RINu_CYG-tGCQI4evg3RF/pub?single=true&output=csv&gid=';
 const CSV_GIDS={HOLTER:'0',HOLTER_IEM:'935984391',REPETICAO:'65846932',MAPA:'1563131554',ECG:'135941513',CHAMADOS:'1748165610',FINANCEIRO:'558473626',LOCALIDADE:'1098931569',AVISOS:'2139582642',NCTS:'1774453101',ANIVERSARIANTES:'1697503541',CENTRAIS:'1487541184'};
 
-// GIDs das abas de resumo histórico (Evolução Mensal)
-// Col A=data, I(8)=ECG, J(9)=HOLTER, K(10)=MAPA
-const INFO_GIDS={2025:'2085163821',2026:'1499671050'};
-// Cache para dados de informações mensais
-let infoCache={};
-
-async function fetchInfoMensal(ano){
-  if(infoCache[ano])return infoCache[ano];
-  const gid=INFO_GIDS[ano];
-  if(!gid)return[];
-  try{
-    const r=await fetch(CSV_BASE+gid);
-    if(!r.ok)return[];
-    const t=await r.text();
-    if(t.trim().startsWith('<'))return[];
-    const lines=t.split('\n').filter(l=>l.trim());
-    const rows=[];
-    const MESES_MAP={'janeiro':0,'fevereiro':1,'marco':2,'marco':2,'abril':3,'maio':4,'junho':5,'julho':6,'agosto':7,'setembro':8,'outubro':9,'novembro':10,'dezembro':11};
-    function parseMesNome(s){return s.toLowerCase().replace(/[àáâãä]/g,'a').replace(/[èéêë]/g,'e').replace(/[ìíîï]/g,'i').replace(/[òóôõö]/g,'o').replace(/[ùúûü]/g,'u').replace(/ç/g,'c').trim()}
-    function parseNum(s){if(!s||!s.trim())return 0;return parseFloat(s.trim().replace(/\./g,'').replace(',','.'))||0}
-    for(let i=1;i<lines.length;i++){
-      const c=csvParse(lines[i]);
-      if(!c[0]||!c[0].trim())continue;
-      const dataRaw=c[0].trim();
-      let mes=undefined,year=null;
-      const mNome=dataRaw.match(/^([a-z\u00e0-\u00fc]+)\/(\d{4})/i);
-      const mNum2=dataRaw.match(/^(\d{1,2})\/(\d{2})\/(\d{4})/);
-      const mNum1=dataRaw.match(/^(\d{1,2})\/(\d{4})/);
-      if(mNome){mes=MESES_MAP[parseMesNome(mNome[1])];year=parseInt(mNome[2]);}
-      else if(mNum2){mes=parseInt(mNum2[2])-1;year=parseInt(mNum2[3]);}
-      else if(mNum1){mes=parseInt(mNum1[1])-1;year=parseInt(mNum1[2]);}
-      if(mes===undefined||mes<0||!year)continue;
-      rows.push({mes,year,ecg:parseNum(c[8]),holter:parseNum(c[9]),mapa:parseNum(c[10])});
-    }
-    infoCache[ano]=rows;
-    return rows;
-  }catch(e){console.warn('fetchInfoMensal erro:',e);return[]}
-}
-
-// Retorna totais mensais históricos para o gráfico de evolução
-// tab = 'HOLTER' | 'MAPA' | 'ECG'
-async function getMonthlyTrendFromInfo(tab,liveData){
-  const bars=[];
-  const [rows25,rows26]=await Promise.all([fetchInfoMensal(2025),fetchInfoMensal(2026)]);
-  const allRows=[...rows25,...rows26];
-  const startYear=2026,startMonth=0;
-  const now=new Date();
-  let m=startMonth,y=startYear;
-  while(y<selYear||(y===selYear&&m<=selMonth)){
-    const mm=m,yy=y;
-    let val=0;
-    // Mês atual ou mês selecionado sem dado na planilha: usa dados brutos carregados
-    const isCurrent=mm===selMonth&&yy===selYear;
-    const found=allRows.find(r=>r.mes===mm&&r.year===yy);
-    const foundVal=found?(tab==='HOLTER'?found.holter:tab==='MAPA'?found.mapa:found.ecg):0;
-    if(isCurrent||!foundVal){
-      // Conta direto nos dados brutos do mês/ano em questão
-      const c=COLS[tab];
-      val=(liveData||[]).filter(r=>{const d=parseDate(r[c.date]);return d&&d.getMonth()===mm&&d.getFullYear()===yy}).length;
-    } else {
-      val=foundVal;
-    }
-    bars.push({label:MONTHS[mm].substring(0,3),value:val,current:isCurrent});
-    m++;if(m>11){m=0;y++}
-  }
-  return bars;
-}
-
 const COLS={
   HOLTER:{date:2,dateReq:1,emerg:0,tempo:4,central:7},
   MAPA:{date:2,dateReq:1,emerg:0,tempo:4,central:6},
@@ -590,31 +522,32 @@ function setViewMode(m){
 function csvParse(line){const r=[];let c='',q=false;for(let i=0;i<line.length;i++){const ch=line[i];if(q){if(ch==='"'&&line[i+1]==='"'){c+='"';i++}else if(ch==='"')q=false;else c+=ch}else{if(ch==='"')q=true;else if(ch===','){r.push(c.trim());c=''}else c+=ch}}r.push(c.trim());return r}
 
 async function fetchData(key){
-  // Só usa cache se tiver dados reais — evita cache de falhas silenciosas
-  if(cache[key]&&cache[key].data&&cache[key].data.length>0)return cache[key];
+  if(cache[key])return cache[key];
   const gid=CSV_GIDS[key];if(!gid&&gid!=='0')throw new Error('GID não encontrado: '+key);
-  let r;
-  try{r=await fetch(CSV_BASE+gid)}catch(e){throw new Error(`Falha de rede – ${key}: ${e.message}`)}
+  const r=await fetch(CSV_BASE+gid);
   if(!r.ok)throw new Error(`HTTP ${r.status} – ${key}`);
   const t=await r.text();
   // Validate it's actually CSV, not an HTML error page
-  if(t.trim().startsWith('!')||t.trim().startsWith('<html')||t.trim().startsWith('<!')){
-    console.warn(`${key}: resposta HTML em vez de CSV (aba pode não estar publicada)`);
-    return{data:[]}; // NÃO salva no cache — próxima chamada tenta de novo
+  if(t.trim().startsWith('<!') || t.trim().startsWith('<html')){
+    console.warn(`${key}: resposta HTML – possível rate limit, não cacheado`);
+    return{data:[]};
   }
   const lines=t.split('\n').filter(l=>l.trim()),rows=[];
   for(let i=1;i<lines.length;i++){const c=csvParse(lines[i]);if(c.length>=2)rows.push(c)}
-  const res={data:rows};
-  if(rows.length>0)cache[key]=res; // Só cacheia se veio dados reais
-  return res;
+  const res={data:rows};cache[key]=res;return res;
 }
 
 async function preloadAll(){
   document.getElementById('mainContent').innerHTML='<div class="loading"><div class="spinner"></div><span class="loading-text">Carregando dados…</span></div>';
-  const keys=['HOLTER','HOLTER_IEM','REPETICAO','MAPA','ECG','CHAMADOS','FINANCEIRO','NCTS','LOCALIDADE','AVISOS','ANIVERSARIANTES','ANIVERSARIANTES','CENTRAIS'];
-  const results=await Promise.allSettled(keys.map(k=>fetchData(k)));
-  results.forEach((r,i)=>{if(r.status==='rejected')console.warn(keys[i]+' falhou:',r.reason)});
+  // Grupo 1: dados principais — carregados primeiro
+  const mainKeys=['HOLTER','HOLTER_IEM','MAPA','ECG','FINANCEIRO','NCTS'];
+  // Grupo 2: dados complementares — carregados após para evitar rate limit
+  const extraKeys=['REPETICAO','CHAMADOS','LOCALIDADE','AVISOS','ANIVERSARIANTES','CENTRAIS'];
+  const r1=await Promise.allSettled(mainKeys.map(k=>fetchData(k)));
+  r1.forEach((r,i)=>{if(r.status==='rejected')console.warn(mainKeys[i]+' falhou:',r.reason)});
   loadTab(currentTab);
+  const r2=await Promise.allSettled(extraKeys.map(k=>fetchData(k)));
+  r2.forEach((r,i)=>{if(r.status==='rejected')console.warn(extraKeys[i]+' falhou:',r.reason)});
 }
 
 async function silentRefresh(){
@@ -629,32 +562,16 @@ async function silentRefresh(){
 //  HOLTER + IEM
 // ═══════════════════════════════════════════════
 async function getHolterMerged(){
-  let h=[],iem=[];
-  try{const res=await fetchData('HOLTER');h=res.data||[]}catch(e){console.warn('HOLTER falhou:',e)}
-  try{const res=await fetchData('HOLTER_IEM');iem=res.data||[]}catch(e){console.warn('HOLTER_IEM falhou:',e)}
-  console.log('[Holter] Principal: '+h.length+' | IEM: '+iem.length);
-  // HOLTER_IEM: 0=Analista,1=Status,2=Data análise,3=Nº exame,4=Data gravação,5=Início,6=Término,7=Obs,8=Total,9=Instituição,10=Nome_Analista
-  const mapped=iem.map(r=>{const a=new Array(11).fill('');a[0]='Não';a[1]=r[2]||'';a[2]=r[2]||'';a[4]='';a[7]=r[9]?'[Saas]'+r[9]:'[Saas]Alemanha IEM';return a});
-  console.log('[Holter] Merged total: '+(h.length+mapped.length));
+  const{data:h}=await fetchData('HOLTER');
+  let iem=[];try{iem=(await fetchData('HOLTER_IEM')).data}catch(e){}
+  const mapped=iem.map(r=>{const a=new Array(11).fill('');a[0]='Não';a[1]=r[2]||'';a[2]=r[2]||'';a[4]='';a[7]='[Saas]Alemanha IEM';return a});
   return{data:[...h,...mapped]};
 }
 
 // ═══════════════════════════════════════════════
 //  UTILITIES
 // ═══════════════════════════════════════════════
-function parseDate(s){
-  if(!s||s==='-'||s==='')return null;
-  s=String(s).trim();
-  // dd/mm/yyyy ou dd/mm/yyyy hh:mm
-  let m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(m)return new Date(+m[3],+m[2]-1,+m[1]);
-  // yyyy-mm-dd ou ISO 2025-01-15T00:00:00
-  m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return new Date(+m[1],+m[2]-1,+m[3]);
-  // dd-mm-yyyy
-  m=s.match(/^(\d{1,2})-(\d{1,2})-(\d{4})/);if(m)return new Date(+m[3],+m[2]-1,+m[1]);
-  // dd.mm.yyyy
-  m=s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})/);if(m)return new Date(+m[3],+m[2]-1,+m[1]);
-  const d=new Date(s);return isNaN(d.getTime())?null:d;
-}
+function parseDate(s){if(!s||s==='-')return null;s=String(s).trim();let m=s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(m)return new Date(+m[3],+m[2]-1,+m[1]);m=s.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return new Date(+m[1],+m[2]-1,+m[3]);const d=new Date(s);return isNaN(d.getTime())?null:d}
 
 function getWeekRange(){
   // Últimos 7 dias completos (exclui hoje)
@@ -758,10 +675,10 @@ function tvBadge(){
 }
 
 // Sparkline: monthly or weekly trend bars
-// examTab opcional: se passado ('HOLTER'|'MAPA'|'ECG'), usa dados da aba INFORMAÇÕES em vez de varrer CSV bruto
 function getMonthlyTrend(data,dateCol,countFn){
+  // Months from Jan 2026 up to current selected month
   const bars=[];
-  const startMonth=0;
+  const startMonth=0; // Janeiro
   const startYear=2026;
   let m=startMonth,y=startYear;
   while(y<selYear||(y===selYear&&m<=selMonth)){
@@ -866,13 +783,11 @@ async function renderGeral(){
   const repAll=filterPeriod(rR.data,cr.date),chamRows=filterPeriod(cR.data,cc.date);
   const hPrev=filterPrevPeriod(hR.data,ch.date),mPrev=filterPrevPeriod(mR.data,cm.date),ePrev=filterPrevPeriod(eR.data,ce.date),chamPrev=filterPrevPeriod(cR.data,cc.date);
 
-  const repFin=repAll.filter(r=>(r[cr.modalidade]||'').trim()==='Finalizado').length;
   const repRep=repAll.filter(r=>(r[cr.modalidade]||'').trim()==='Repetição').length;
-  const repT=repFin+repRep;const repPct=repT>0?(repRep/repT*100):0;
+  const repT=hRows.length;const repPct=repT>0?(repRep/repT*100):0;
   const repPrevAll=filterPrevPeriod(rR.data,cr.date);
-  const repPrevFin=repPrevAll.filter(r=>(r[cr.modalidade]||'').trim()==='Finalizado').length;
   const repPrevRep=repPrevAll.filter(r=>(r[cr.modalidade]||'').trim()==='Repetição').length;
-  const repPrevT=repPrevFin+repPrevRep;const repPrevPct=repPrevT>0?(repPrevRep/repPrevT*100):0;
+  const repPrevT=hPrev.length;const repPrevPct=repPrevT>0?(repPrevRep/repPrevT*100):0;
 
   const tot=hRows.length+mRows.length+eRows.length;
   const totP=hPrev.length+mPrev.length+ePrev.length;
@@ -890,7 +805,7 @@ async function renderGeral(){
       ${sCard('MAPA','🩺','Mapa',mRows,mPrev,cm)}
       ${sCard('ECG','❤️','ECG',eRows,ePrev,ce)}
       <div class="overview-sector" onclick="switchTab('REPETICAO')"><div class="sector-header"><span class="sector-emoji">🔁</span><span class="sector-name">Repetição</span></div>
-        <div class="sector-kpis"><div><div class="sector-kpi-label">Finalizados</div><div class="sector-kpi-val">${fmtNum(repFin)}</div></div><div><div class="sector-kpi-label">Repetições</div><div class="sector-kpi-val" style="color:var(--red)">${fmtNum(repRep)}</div><div class="sector-kpi-sub">${repPct.toFixed(1)}%</div></div></div></div>
+        <div class="sector-kpis"><div><div class="sector-kpi-label">Total Holter</div><div class="sector-kpi-val">${fmtNum(repT)}</div></div><div><div class="sector-kpi-label">Repetições</div><div class="sector-kpi-val" style="color:var(--red)">${fmtNum(repRep)}</div><div class="sector-kpi-sub">${repPct.toFixed(1)}%</div></div></div></div>
       <div class="overview-sector" onclick="switchTab('CHAMADOS')"><div class="sector-header"><span class="sector-emoji">🎧</span><span class="sector-name">Chamados</span></div>
         <div class="sector-kpis"><div><div class="sector-kpi-label">Total</div><div class="sector-kpi-val">${fmtNum(chamRows.length)}</div>${cmpHTML(chamRows.length,chamPrev.length)}</div><div><div class="sector-kpi-label">Média Atend.</div><div class="sector-kpi-val" style="font-size:18px">${fmtHMS(avgSecs(chamRows,cc.tempo))}</div></div></div></div>
     </div>`;
@@ -928,9 +843,7 @@ async function renderExam(tab){
   const avgT=avgSecs(rows,c.tempo),prevAvg=avgSecs(prev,c.tempo);
   const top=topN(rows,c.central,tvN()),mx=top[0]?.[1]||1;
   const lbl={HOLTER:'Holter',MAPA:'Mapa',ECG:'ECG'},emj={HOLTER:'📊',MAPA:'🩺',ECG:'❤️'};
-  const trend=viewMode==='month'
-    ? await getMonthlyTrendFromInfo(tab,res.data)
-    : getWeeklyTrend(res.data,dateCol);
+  const trend=getTrend(res.data,dateCol);
 
   const hasReq=c.dateReq!=null;
   const dateToggle=hasReq?`<div class="type-toggle">
@@ -973,18 +886,22 @@ async function renderExam(tab){
 //  RENDER: REPETIÇÃO
 // ═══════════════════════════════════════════════
 async function renderRep(){
-  let repData=[];try{const res=await fetchData('REPETICAO');repData=res.data||[]}catch(e){console.warn('REPETICAO falhou:',e)}
-  console.log('[Repetição] Total linhas:',repData.length);
-  if(repData.length>0){console.log('[Repetição] Primeira linha:',repData[0]);console.log('[Repetição] Col0 (data):',repData[0][0],'Col10 (modalidade):',repData[0][10])}
-  const data=repData;const c=COLS.REPETICAO;
+  const[{data},holterR]=await Promise.all([fetchData('REPETICAO'),getHolterMerged()]);
+  const c=COLS.REPETICAO,ch=COLS.HOLTER;
   const all=filterPeriod(data,c.date),prevAll=filterPrevPeriod(data,c.date);
-  console.log('[Repetição] Filtrados no período:',all.length,'| Período:',selMonth+1,selYear);
-  const fin=all.filter(r=>(r[c.modalidade]||'').trim()==='Finalizado').length;
+
+  // Repetições da aba REPETICAO
   const rep=all.filter(r=>(r[c.modalidade]||'').trim()==='Repetição').length;
-  const tot=fin+rep;const pct=tot>0?(rep/tot*100):0;
-  const pFin=prevAll.filter(r=>(r[c.modalidade]||'').trim()==='Finalizado').length;
   const pRep=prevAll.filter(r=>(r[c.modalidade]||'').trim()==='Repetição').length;
-  const pTot=pFin+pRep;const pPct=pTot>0?(pRep/pTot*100):0;
+
+  // Denominador correto: total de exames Holter no período (por data de conclusão)
+  const holterAll=filterPeriod(holterR.data,ch.date);
+  const holterPrev=filterPrevPeriod(holterR.data,ch.date);
+  const tot=holterAll.length;
+  const pTot=holterPrev.length;
+  const fin=Math.max(0,tot-rep);
+  const pct=tot>0?(rep/tot*100):0;
+  const pPct=pTot>0?(pRep/pTot*100):0;
 
   const saasC=all.filter(r=>{const m=(r[c.modalidade]||'').trim();return(m==='Finalizado'||m==='Repetição')&&(r[c.saaslaudo]||'').trim()==='SAAS'}).length;
   const laudC=all.filter(r=>{const m=(r[c.modalidade]||'').trim();return(m==='Finalizado'||m==='Repetição')&&(r[c.saaslaudo]||'').trim()==='Laudos'}).length;
@@ -993,8 +910,9 @@ async function renderRep(){
   const motivos={};repRows.forEach(r=>{const m=(r[c.motivo]||'').trim();if(m&&m!=='-')motivos[m]=(motivos[m]||0)+1});
   const topMot=Object.entries(motivos).sort((a,b)=>b[1]-a[1]);const mxM=topMot[0]?.[1]||1;
   const topCR=topN(repRows,c.central,tvN());const mxC=topCR[0]?.[1]||1;
+  // Denominador por central: total Holter por central
   const totalByCentral={};
-  all.forEach(r=>{const m=(r[c.modalidade]||'').trim();if(m==='Finalizado'||m==='Repetição'){const cn=(r[c.central]||'').trim();if(cn)totalByCentral[cn]=(totalByCentral[cn]||0)+1}});
+  holterAll.forEach(r=>{const cn=(r[ch.central]||'').trim();if(cn)totalByCentral[cn]=(totalByCentral[cn]||0)+1});
 
   const circ=2*Math.PI*50;const off=circ-(pct/100)*circ;
 
@@ -1005,7 +923,7 @@ async function renderRep(){
       <div class="rep-ring-wrap"><svg class="rep-ring-svg" width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="50" fill="none" stroke="#e2e8f0" stroke-width="10"/><circle cx="60" cy="60" r="50" fill="none" stroke="${pct>3?'var(--red)':'var(--cyan)'}" stroke-width="10" stroke-dasharray="${circ}" stroke-dashoffset="${off}" stroke-linecap="round"/></svg>
         <div class="rep-ring-text"><div class="rep-ring-num">${pct.toFixed(1)}%</div><div class="rep-ring-label">Repetição</div></div></div>
       <div class="rep-stats">
-        <div><div class="rep-stat-label">Por data de solicitação</div><div class="rep-stat-val">${fmtNum(fin)}</div><div class="rep-stat-sub">exames no período</div></div>
+        <div><div class="rep-stat-label">Total Holter</div><div class="rep-stat-val">${fmtNum(tot)}</div><div class="rep-stat-sub">exames no período</div></div>
         <div><div class="rep-stat-label">Repetições</div><div class="rep-stat-val" style="color:var(--red)">${fmtNum(rep)}</div><div class="rep-stat-sub">${pct.toFixed(1)}%</div>${cmpHTML(pct,pPct,'',true)}</div>
         <div><div class="rep-stat-label">SAAS</div><div class="rep-stat-val">${fmtNum(saasC)}</div><div class="rep-stat-sub">${tot>0?((saasC/tot)*100).toFixed(1):0}%</div></div>
         <div><div class="rep-stat-label">Laudos (TD)</div><div class="rep-stat-val">${fmtNum(laudC)}</div><div class="rep-stat-sub">${tot>0?((laudC/tot)*100).toFixed(1):0}%</div></div>
