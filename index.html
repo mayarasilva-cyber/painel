@@ -969,23 +969,30 @@ async function renderRep(){
   const rep=all.filter(r=>(r[c.modalidade]||'').trim()==='Repetição').length;
   const pRep=prevAll.filter(r=>(r[c.modalidade]||'').trim()==='Repetição').length;
 
-  // Denominador correto: total de exames Holter no período (por data de conclusão)
-  const holterAll=filterPeriod(holterR.data,ch.date);
-  const holterPrev=filterPrevPeriod(holterR.data,ch.date);
+  // Denominador: total Holter por data de solicitação
+  const holterAll=filterPeriod(holterR.data,ch.dateReq);
+  const holterPrev=filterPrevPeriod(holterR.data,ch.dateReq);
   const tot=holterAll.length;
-  const pTot=holterPrev.length;
-  const fin=Math.max(0,tot-rep);
+  // Mês anterior via INFORMAÇÕES (dados arquivados)
+  let pTot=holterPrev.length;
+  if(viewMode==='month'){
+    const[r25,r26]=await Promise.all([fetchInfoMensal(2025),fetchInfoMensal(2026)]);
+    let pm=selMonth-1,py=selYear;if(pm<0){pm=11;py--}
+    const inf=[...r25,...r26].find(r=>r.mes===pm&&r.year===py);
+    if(inf&&inf.holter>0)pTot=inf.holter;
+  }
   const pct=tot>0?(rep/tot*100):0;
   const pPct=pTot>0?(pRep/pTot*100):0;
 
-  const saasC=all.filter(r=>{const m=(r[c.modalidade]||'').trim();return(m==='Finalizado'||m==='Repetição')&&(r[c.saaslaudo]||'').trim()==='SAAS'}).length;
-  const laudC=all.filter(r=>{const m=(r[c.modalidade]||'').trim();return(m==='Finalizado'||m==='Repetição')&&(r[c.saaslaudo]||'').trim()==='Laudos'}).length;
+  // SAAS/TD a partir dos dados Holter (por central)
+  const saasC=holterAll.filter(r=>isSaas(r[ch.central])).length;
+  const tdC=holterAll.filter(r=>!isSaas(r[ch.central])).length;
 
   const repRows=all.filter(r=>(r[c.modalidade]||'').trim()==='Repetição');
   const motivos={};repRows.forEach(r=>{const m=(r[c.motivo]||'').trim();if(m&&m!=='-')motivos[m]=(motivos[m]||0)+1});
   const topMot=Object.entries(motivos).sort((a,b)=>b[1]-a[1]);const mxM=topMot[0]?.[1]||1;
   const topCR=topN(repRows,c.central,tvN());const mxC=topCR[0]?.[1]||1;
-  // Denominador por central: total Holter por central
+  // Denominador por central: total Holter por central (solicitação)
   const totalByCentral={};
   holterAll.forEach(r=>{const cn=(r[ch.central]||'').trim();if(cn)totalByCentral[cn]=(totalByCentral[cn]||0)+1});
 
@@ -1001,7 +1008,7 @@ async function renderRep(){
         <div><div class="rep-stat-label">Total Holter</div><div class="rep-stat-val">${fmtNum(tot)}</div><div class="rep-stat-sub">exames no período</div></div>
         <div><div class="rep-stat-label">Repetições</div><div class="rep-stat-val" style="color:var(--red)">${fmtNum(rep)}</div><div class="rep-stat-sub">${pct.toFixed(1)}%</div>${cmpHTML(pct,pPct,'',true)}</div>
         <div><div class="rep-stat-label">SAAS</div><div class="rep-stat-val">${fmtNum(saasC)}</div><div class="rep-stat-sub">${tot>0?((saasC/tot)*100).toFixed(1):0}%</div></div>
-        <div><div class="rep-stat-label">Laudos (TD)</div><div class="rep-stat-val">${fmtNum(laudC)}</div><div class="rep-stat-sub">${tot>0?((laudC/tot)*100).toFixed(1):0}%</div></div>
+        <div><div class="rep-stat-label">TD</div><div class="rep-stat-val">${fmtNum(tdC)}</div><div class="rep-stat-sub">${tot>0?((tdC/tot)*100).toFixed(1):0}%</div></div>
       </div>
     </div>
     <div class="tables-grid">
