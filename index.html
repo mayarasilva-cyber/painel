@@ -467,6 +467,8 @@ body.tv-mode .branch-count-badge{background:#0ea5e9}
 // ═══════════════════════════════════════════════
 const CSV_BASE='https://docs.google.com/spreadsheets/d/e/2PACX-1vTcbbHtFlaA3tt8Mv1NF22YPbetZRLM9chO6G1gqWSpO2RSPQu_7Gzi_V4RINu_CYG-tGCQI4evg3RF/pub?single=true&output=csv&gid=';
 const CSV_GIDS={HOLTER:'0',HOLTER_IEM:'935984391',REPETICAO:'65846932',MAPA:'1563131554',ECG:'135941513',CHAMADOS:'1748165610',FINANCEIRO:'558473626',LOCALIDADE:'1098931569',AVISOS:'2139582642',NCTS:'1774453101',ANIVERSARIANTES:'1697503541',CENTRAIS:'1487541184'};
+const INFO_GIDS={2025:'2085163821',2026:'1499671050'};
+let infoCache={};
 
 const COLS={
   HOLTER:{date:2,dateReq:1,emerg:0,tempo:4,central:7},
@@ -716,6 +718,61 @@ function sparkHTML(bars){
 function getTrend(data,dateCol,countFn){
   return viewMode==='month'?getMonthlyTrend(data,dateCol,countFn):getWeeklyTrend(data,dateCol,countFn);
 }
+async function fetchInfoMensal(ano){
+  if(infoCache[ano])return infoCache[ano];
+  const gid=INFO_GIDS[ano];
+  if(!gid)return[];
+  try{
+    const r=await fetch(CSV_BASE+gid);
+    if(!r.ok)return[];
+    const t=await r.text();
+    if(t.trim().startsWith('<'))return[];
+    const lines=t.split('\n').filter(l=>l.trim());
+    const rows=[];
+    const MESES_MAP={'janeiro':0,'fevereiro':1,'marco':2,'abril':3,'maio':4,'junho':5,'julho':6,'agosto':7,'setembro':8,'outubro':9,'novembro':10,'dezembro':11};
+    function parseMesNome(s){return s.toLowerCase().replace(/[àáâãä]/g,'a').replace(/[èéêë]/g,'e').replace(/[ìíîï]/g,'i').replace(/[òóôõö]/g,'o').replace(/[ùúûü]/g,'u').replace(/ç/g,'c').trim()}
+    function parseNum(s){if(!s||!s.trim())return 0;return parseFloat(s.trim().replace(/\./g,'').replace(',','.'))||0}
+    for(let i=1;i<lines.length;i++){
+      const c=csvParse(lines[i]);
+      if(!c[0]||!c[0].trim())continue;
+      const dataRaw=c[0].trim();
+      let mes=undefined,year=null;
+      const mNome=dataRaw.match(/^([a-zà-ü]+)\/(\d{4})/i);
+      const mNum2=dataRaw.match(/^(\d{1,2})\/(\d{2})\/(\d{4})/);
+      const mNum1=dataRaw.match(/^(\d{1,2})\/(\d{4})/);
+      if(mNome){mes=MESES_MAP[parseMesNome(mNome[1])];year=parseInt(mNome[2]);}
+      else if(mNum2){mes=parseInt(mNum2[2])-1;year=parseInt(mNum2[3]);}
+      else if(mNum1){mes=parseInt(mNum1[1])-1;year=parseInt(mNum1[2]);}
+      if(mes===undefined||mes<0||!year)continue;
+      rows.push({mes,year,ecg:parseNum(c[8]),holter:parseNum(c[9]),mapa:parseNum(c[10])});
+    }
+    infoCache[ano]=rows;
+    return rows;
+  }catch(e){console.warn('fetchInfoMensal erro:',e);return[]}
+}
+async function getMonthlyTrendFromInfo(tab,liveData){
+  const bars=[];
+  const[rows25,rows26]=await Promise.all([fetchInfoMensal(2025),fetchInfoMensal(2026)]);
+  const allRows=[...rows25,...rows26];
+  const startYear=2026,startMonth=0;
+  let m=startMonth,y=startYear;
+  while(y<selYear||(y===selYear&&m<=selMonth)){
+    const mm=m,yy=y;
+    const isCurrent=mm===selMonth&&yy===selYear;
+    const found=allRows.find(r=>r.mes===mm&&r.year===yy);
+    const foundVal=found?(tab==='HOLTER'?found.holter:tab==='MAPA'?found.mapa:found.ecg):0;
+    let val=0;
+    if(isCurrent||!foundVal){
+      const c=COLS[tab];
+      val=(liveData||[]).filter(r=>{const d=parseDate(r[c.date]);return d&&d.getMonth()===mm&&d.getFullYear()===yy}).length;
+    } else {
+      val=foundVal;
+    }
+    bars.push({label:MONTHS[mm].substring(0,3),value:val,current:isCurrent});
+    m++;if(m>11){m=0;y++}
+  }
+  return bars;
+}
 
 // ═══════════════════════════════════════════════
 //  CAROUSEL
@@ -843,7 +900,7 @@ async function renderExam(tab){
   const avgT=avgSecs(rows,c.tempo),prevAvg=avgSecs(prev,c.tempo);
   const top=topN(rows,c.central,tvN()),mx=top[0]?.[1]||1;
   const lbl={HOLTER:'Holter',MAPA:'Mapa',ECG:'ECG'},emj={HOLTER:'📊',MAPA:'🩺',ECG:'❤️'};
-  const trend=getTrend(res.data,dateCol);
+  const trend=viewMode==='month'?await getMonthlyTrendFromInfo(tab,res.data):getWeeklyTrend(res.data,dateCol);
 
   const hasReq=c.dateReq!=null;
   const dateToggle=hasReq?`<div class="type-toggle">
