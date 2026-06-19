@@ -619,6 +619,16 @@ function topN(data,col,n=10){const c={};data.forEach(r=>{const v=(r[col]||'').tr
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function tvN(){return carouselActive?5:8}
 
+function proportionalFromInfo(rawCount){
+  // Aplica o mesmo fator proporcional que filterPrevPeriod usa nos dados brutos
+  const now=new Date();
+  let maxDay;
+  if(selYear===now.getFullYear()&&selMonth===now.getMonth())maxDay=now.getDate()-1;
+  else maxDay=new Date(selYear,selMonth+1,0).getDate();
+  let pm=selMonth-1,py=selYear;if(pm<0){pm=11;py--}
+  const daysInPrev=new Date(py,pm+1,0).getDate();
+  return Math.round(rawCount*(maxDay/daysInPrev));
+}
 function cmpHTML(cur,prev,sfx='',invert=false){
   if(prev===0||prev===null)return'<div class="cmp neutral">— sem dados ant.</div>';
   const p=((cur-prev)/prev*100);
@@ -846,7 +856,7 @@ async function renderGeral(){
     const[r25,r26]=await Promise.all([fetchInfoMensal(2025),fetchInfoMensal(2026)]);
     let pm=selMonth-1,py=selYear;if(pm<0){pm=11;py--}
     const inf=[...r25,...r26].find(r=>r.mes===pm&&r.year===py);
-    if(inf){if(inf.holter>0)hPrevN=inf.holter;if(inf.mapa>0)mPrevN=inf.mapa;if(inf.ecg>0)ePrevN=inf.ecg;}
+    if(inf){if(inf.holter>0)hPrevN=proportionalFromInfo(inf.holter);if(inf.mapa>0)mPrevN=proportionalFromInfo(inf.mapa);if(inf.ecg>0)ePrevN=proportionalFromInfo(inf.ecg);}
   }
 
   const repRep=repAll.filter(r=>(r[cr.modalidade]||'').trim()==='Repetição').length;
@@ -917,7 +927,7 @@ async function renderExam(tab){
     let pm=selMonth-1,py=selYear;if(pm<0){pm=11;py--}
     const infoAll=[...(infoCache[2025]||[]),...(infoCache[2026]||[])];
     const inf=infoAll.find(r=>r.mes===pm&&r.year===py);
-    if(inf){const iv=tab==='HOLTER'?inf.holter:tab==='MAPA'?inf.mapa:inf.ecg;if(iv>0){prevConcN=iv;if(prevReqN!==null)prevReqN=iv;}}
+    if(inf){const iv=tab==='HOLTER'?inf.holter:tab==='MAPA'?inf.mapa:inf.ecg;if(iv>0){prevConcN=proportionalFromInfo(iv);if(prevReqN!==null)prevReqN=proportionalFromInfo(iv);}}
   }
 
   const hasReq=c.dateReq!=null;
@@ -979,7 +989,7 @@ async function renderRep(){
     const[r25,r26]=await Promise.all([fetchInfoMensal(2025),fetchInfoMensal(2026)]);
     let pm=selMonth-1,py=selYear;if(pm<0){pm=11;py--}
     const inf=[...r25,...r26].find(r=>r.mes===pm&&r.year===py);
-    if(inf&&inf.holter>0)pTot=inf.holter;
+    if(inf&&inf.holter>0)pTot=proportionalFromInfo(inf.holter);
   }
   const pct=tot>0?(rep/tot*100):0;
   const pPct=pTot>0?(pRep/pTot*100):0;
