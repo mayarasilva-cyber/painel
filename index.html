@@ -901,6 +901,14 @@ async function renderExam(tab){
   const top=topN(rows,c.central,tvN()),mx=top[0]?.[1]||1;
   const lbl={HOLTER:'Holter',MAPA:'Mapa',ECG:'ECG'},emj={HOLTER:'📊',MAPA:'🩺',ECG:'❤️'};
   const trend=viewMode==='month'?await getMonthlyTrendFromInfo(tab,res.data):getWeeklyTrend(res.data,dateCol);
+  // Mês anterior: usa dados arquivados de INFORMAÇÕES quando disponível (infoCache já populado pelo trend acima)
+  let prevConcN=prevConc.length,prevReqN=prevReq?prevReq.length:null;
+  if(viewMode==='month'){
+    let pm=selMonth-1,py=selYear;if(pm<0){pm=11;py--}
+    const infoAll=[...(infoCache[2025]||[]),...(infoCache[2026]||[])];
+    const inf=infoAll.find(r=>r.mes===pm&&r.year===py);
+    if(inf){const iv=tab==='HOLTER'?inf.holter:tab==='MAPA'?inf.mapa:inf.ecg;if(iv>0){prevConcN=iv;if(prevReqN!==null)prevReqN=iv;}}
+  }
 
   const hasReq=c.dateReq!=null;
   const dateToggle=hasReq?`<div class="type-toggle">
@@ -916,8 +924,8 @@ async function renderExam(tab){
         <div class="type-toggle"><button class="type-btn ${f==='all'?'active':''}" onclick="setExamFilter('${tab}','all')">Geral</button><button class="type-btn ${f==='saas'?'active':''}" onclick="setExamFilter('${tab}','saas')">SAAS</button><button class="type-btn ${f==='td'?'active':''}" onclick="setExamFilter('${tab}','td')">TD</button></div>
       </div></div>
     <div class="kpi-grid" style="grid-template-columns:repeat(${hasReq?5:4},1fr)">
-      <div class="kpi-card navy-card"><div class="kpi-label">Exames por data de conclusão</div><div class="kpi-value">${fmtNum(allConc.length)}</div><div class="kpi-sub">${pLabel()}</div>${cmpHTML(allConc.length,prevConc.length)}</div>
-      ${hasReq?`<div class="kpi-card" style="border-top:3px solid var(--amber)"><div class="kpi-label">Exames por data de solicitação</div><div class="kpi-value" style="color:var(--amber)">${fmtNum(allReq.length)}</div><div class="kpi-sub">${pLabel()}</div>${cmpHTML(allReq.length,prevReq.length)}</div>`:''}
+      <div class="kpi-card navy-card"><div class="kpi-label">Exames por data de conclusão</div><div class="kpi-value">${fmtNum(allConc.length)}</div><div class="kpi-sub">${pLabel()}</div>${cmpHTML(allConc.length,prevConcN)}</div>
+      ${hasReq?`<div class="kpi-card" style="border-top:3px solid var(--amber)"><div class="kpi-label">Exames por data de solicitação</div><div class="kpi-value" style="color:var(--amber)">${fmtNum(allReq.length)}</div><div class="kpi-sub">${pLabel()}</div>${cmpHTML(allReq.length,prevReqN)}</div>`:''}
       <div class="kpi-card"><div class="kpi-label">Emergências</div><div class="kpi-value">${fmtNum(em)}</div><div class="kpi-sub">${tot>0?((em/tot)*100).toFixed(1):0}% dos ${dm==='solicitacao'?'solicitados':'laudados'}</div></div>
       <div class="kpi-card cyan-card"><div class="kpi-label">Média Tempo Laudo</div><div class="kpi-value" style="font-size:24px">${fmtHMS(avgT)}</div><div class="kpi-sub">por exame</div>${avgT!==null&&prevAvg!==null?cmpHTML(avgT,prevAvg,'',true):''}</div>
       <div class="kpi-card"><div class="kpi-label">Evolução ${viewMode==='month'?'Mensal':'Semanal'}</div>${sparkHTML(trend)}</div>
