@@ -920,8 +920,9 @@ async function renderExam(tab){
   const avgT=avgSecs(rows,c.tempo),prevAvg=avgSecs(prev,c.tempo);
   const top=topN(rows,c.central,tvN()),mx=top[0]?.[1]||1;
   const lbl={HOLTER:'Holter',MAPA:'Mapa',ECG:'ECG'},emj={HOLTER:'📊',MAPA:'🩺',ECG:'❤️'};
-  // Popula infoCache para uso em prevConcN e prevReqN
-  if(viewMode==='month') await Promise.all([fetchInfoMensal(2025),fetchInfoMensal(2026)]);
+  // Trend mensal (também popula infoCache para prevConcN/prevReqN)
+  const trend=viewMode==='month'?await getMonthlyTrendFromInfo(tab,res.data):getWeeklyTrend(res.data,dateCol);
+  const trendMx=Math.max(...trend.map(b=>b.value),1);
   // Mês anterior: usa dados arquivados de INFORMAÇÕES quando disponível
   let prevConcN=prevConc.length,prevReqN=prevReq?prevReq.length:null;
   if(viewMode==='month'){
@@ -944,30 +945,32 @@ async function renderExam(tab){
         ${dateToggle}
         <div class="type-toggle"><button class="type-btn ${f==='all'?'active':''}" onclick="setExamFilter('${tab}','all')">Geral</button><button class="type-btn ${f==='saas'?'active':''}" onclick="setExamFilter('${tab}','saas')">SAAS</button><button class="type-btn ${f==='td'?'active':''}" onclick="setExamFilter('${tab}','td')">TD</button></div>
       </div></div>
-    <div class="kpi-grid" style="grid-template-columns:repeat(${hasReq?5:4},1fr)">
+    <div class="kpi-grid" style="grid-template-columns:repeat(${hasReq?4:3},1fr)">
       <div class="kpi-card navy-card"><div class="kpi-label">Exames por data de conclusão</div><div class="kpi-value">${fmtNum(allConc.length)}</div><div class="kpi-sub">${pLabel()}</div>${cmpHTML(allConc.length,prevConcN)}</div>
       ${hasReq?`<div class="kpi-card" style="border-top:3px solid var(--amber)"><div class="kpi-label">Exames por data de solicitação</div><div class="kpi-value" style="color:var(--amber)">${fmtNum(allReq.length)}</div><div class="kpi-sub">${pLabel()}</div>${cmpHTML(allReq.length,prevReqN)}</div>`:''}
       <div class="kpi-card"><div class="kpi-label">Emergências</div><div class="kpi-value">${fmtNum(em)}</div><div class="kpi-sub">${tot>0?((em/tot)*100).toFixed(1):0}% dos ${dm==='solicitacao'?'solicitados':'laudados'}</div></div>
       <div class="kpi-card cyan-card"><div class="kpi-label">Média Tempo Laudo</div><div class="kpi-value" style="font-size:24px">${fmtHMS(avgT)}</div><div class="kpi-sub">por exame</div>${avgT!==null&&prevAvg!==null?cmpHTML(avgT,prevAvg,'',true):''}</div>
-      <div class="kpi-card">
-        <div class="kpi-label">SAAS vs TD</div>
-        <div style="margin:10px 0 8px;height:10px;border-radius:6px;overflow:hidden;display:flex;gap:2px">
-          <div style="flex:${saas.length||1};background:var(--cyan);border-radius:6px 0 0 6px;transition:flex .4s"></div>
-          <div style="flex:${td.length||1};background:#1e3a5f;border-radius:0 6px 6px 0;transition:flex .4s"></div>
-        </div>
-        <div style="display:flex;gap:16px;margin-top:4px">
-          <div>
-            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--cyan)">☁️ SAAS</div>
-            <div style="font-size:20px;font-weight:800;line-height:1.1">${fmtNum(saas.length)}</div>
-            <div style="font-size:11px;color:var(--text-soft)">${tot>0?(saas.length/tot*100).toFixed(1):0}%</div>
-          </div>
-          <div style="width:1px;background:var(--border);margin:0 2px"></div>
-          <div>
-            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#60a5fa">🏥 TD</div>
-            <div style="font-size:20px;font-weight:800;line-height:1.1">${fmtNum(td.length)}</div>
-            <div style="font-size:11px;color:var(--text-soft)">${tot>0?(td.length/tot*100).toFixed(1):0}%</div>
-          </div>
-        </div>
+    </div>
+    <div class="table-card" style="padding:18px 24px 20px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <div class="table-card-title" style="margin:0">📈 Evolução ${viewMode==='month'?'Mensal':'Semanal'} — ${lbl[tab]}</div>
+        <div style="font-size:11px;color:var(--text-soft);font-weight:600">Jan → ${MONTHS[selMonth].substring(0,3)} ${selYear}</div>
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:6px;height:130px">
+        ${trend.map(b=>{
+          const h=Math.max((b.value/trendMx)*100,3);
+          const valStr=b.value>=1000?(b.value/1000).toFixed(1)+'k':fmtNum(b.value);
+          const barColor=b.current?'var(--cyan)':'rgba(56,189,248,0.28)';
+          const lblColor=b.current?'var(--cyan)':'var(--text-soft)';
+          const valColor=b.current?'var(--text)':'var(--text-soft)';
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0">
+            <div style="font-size:${carouselActive?'11':'10'}px;font-weight:700;color:${valColor};white-space:nowrap">${valStr}</div>
+            <div style="width:100%;flex:1;display:flex;align-items:flex-end">
+              <div style="width:100%;height:${h}%;background:${barColor};border-radius:4px 4px 0 0;min-height:3px;transition:height .3s"></div>
+            </div>
+            <div style="font-size:${carouselActive?'12':'10'}px;font-weight:${b.current?800:600};color:${lblColor}">${b.label}</div>
+          </div>`;
+        }).join('')}
       </div>
     </div>
     <div class="split-row">
