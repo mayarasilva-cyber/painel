@@ -529,13 +529,15 @@ async function fetchData(key){
   const r=await fetch(CSV_BASE+gid);
   if(!r.ok)throw new Error(`HTTP ${r.status} – ${key}`);
   const t=await r.text();
-  // Validate it's actually CSV, not an HTML error page
-  if(t.trim().startsWith('<!') || t.trim().startsWith('<html')){
-    console.warn(`${key}: resposta HTML – possível rate limit, não cacheado`);
+  // Qualquer resposta HTML (rate limit, redirect, erro) — nunca cachear
+  if(t.trim().startsWith('<')){
+    console.warn(`${key}: resposta não-CSV (possível rate limit ou redirect), não cacheado`);
     return{data:[]};
   }
   const lines=t.split('\n').filter(l=>l.trim()),rows=[];
   for(let i=1;i<lines.length;i++){const c=csvParse(lines[i]);if(c.length>=2)rows.push(c)}
+  // Só cacheia se tiver dados reais
+  if(!rows.length){console.warn(`${key}: CSV vazio, não cacheado`);return{data:[]}}
   const res={data:rows};cache[key]=res;return res;
 }
 
