@@ -501,7 +501,7 @@ let carouselActive=false,carouselPaused=false,carouselTimer=null,carouselProgres
   yS.addEventListener('change',()=>{selYear=+yS.value;buildWeekOpts();refreshAll()});
   buildWeekOpts();
   document.getElementById('selWeek').addEventListener('change',e=>{selWeek=+e.target.value;loadTab(currentTab)});
-  preloadAll();
+  preloadAll().then(()=>toggleCarousel());
   setInterval(silentRefresh,5*60*1000);
 })();
 
@@ -920,8 +920,9 @@ async function renderExam(tab){
   const avgT=avgSecs(rows,c.tempo),prevAvg=avgSecs(prev,c.tempo);
   const top=topN(rows,c.central,tvN()),mx=top[0]?.[1]||1;
   const lbl={HOLTER:'Holter',MAPA:'Mapa',ECG:'ECG'},emj={HOLTER:'📊',MAPA:'🩺',ECG:'❤️'};
-  const trend=viewMode==='month'?await getMonthlyTrendFromInfo(tab,res.data):getWeeklyTrend(res.data,dateCol);
-  // Mês anterior: usa dados arquivados de INFORMAÇÕES quando disponível (infoCache já populado pelo trend acima)
+  // Popula infoCache para uso em prevConcN e prevReqN
+  if(viewMode==='month') await Promise.all([fetchInfoMensal(2025),fetchInfoMensal(2026)]);
+  // Mês anterior: usa dados arquivados de INFORMAÇÕES quando disponível
   let prevConcN=prevConc.length,prevReqN=prevReq?prevReq.length:null;
   if(viewMode==='month'){
     let pm=selMonth-1,py=selYear;if(pm<0){pm=11;py--}
@@ -948,7 +949,26 @@ async function renderExam(tab){
       ${hasReq?`<div class="kpi-card" style="border-top:3px solid var(--amber)"><div class="kpi-label">Exames por data de solicitação</div><div class="kpi-value" style="color:var(--amber)">${fmtNum(allReq.length)}</div><div class="kpi-sub">${pLabel()}</div>${cmpHTML(allReq.length,prevReqN)}</div>`:''}
       <div class="kpi-card"><div class="kpi-label">Emergências</div><div class="kpi-value">${fmtNum(em)}</div><div class="kpi-sub">${tot>0?((em/tot)*100).toFixed(1):0}% dos ${dm==='solicitacao'?'solicitados':'laudados'}</div></div>
       <div class="kpi-card cyan-card"><div class="kpi-label">Média Tempo Laudo</div><div class="kpi-value" style="font-size:24px">${fmtHMS(avgT)}</div><div class="kpi-sub">por exame</div>${avgT!==null&&prevAvg!==null?cmpHTML(avgT,prevAvg,'',true):''}</div>
-      <div class="kpi-card"><div class="kpi-label">Evolução ${viewMode==='month'?'Mensal':'Semanal'}</div>${sparkHTML(trend)}</div>
+      <div class="kpi-card">
+        <div class="kpi-label">SAAS vs TD</div>
+        <div style="margin:10px 0 8px;height:10px;border-radius:6px;overflow:hidden;display:flex;gap:2px">
+          <div style="flex:${saas.length||1};background:var(--cyan);border-radius:6px 0 0 6px;transition:flex .4s"></div>
+          <div style="flex:${td.length||1};background:#1e3a5f;border-radius:0 6px 6px 0;transition:flex .4s"></div>
+        </div>
+        <div style="display:flex;gap:16px;margin-top:4px">
+          <div>
+            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--cyan)">☁️ SAAS</div>
+            <div style="font-size:20px;font-weight:800;line-height:1.1">${fmtNum(saas.length)}</div>
+            <div style="font-size:11px;color:var(--text-soft)">${tot>0?(saas.length/tot*100).toFixed(1):0}%</div>
+          </div>
+          <div style="width:1px;background:var(--border);margin:0 2px"></div>
+          <div>
+            <div style="font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:#60a5fa">🏥 TD</div>
+            <div style="font-size:20px;font-weight:800;line-height:1.1">${fmtNum(td.length)}</div>
+            <div style="font-size:11px;color:var(--text-soft)">${tot>0?(td.length/tot*100).toFixed(1):0}%</div>
+          </div>
+        </div>
+      </div>
     </div>
     <div class="split-row">
       <div class="split-card"><div class="split-dot dot-saas">☁️</div><div><div class="split-type">SAAS</div><div class="split-num">${fmtNum(saas.length)}</div><div class="split-pct">${tot>0?((saas.length/tot)*100).toFixed(1):0}%</div></div></div>
