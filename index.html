@@ -195,50 +195,6 @@ body.tv-mode .bday-sector{color:#64748b;font-size:12px}
 body.tv-mode .bday-photo-fallback{color:#38bdf8}
 body.tv-mode .bday-empty{color:#64748b}
 
-/* ─── NCTs ─── */
-.ncts-header{display:flex;align-items:center;gap:20px;margin-bottom:12px;flex-wrap:wrap}
-.ncts-global{background:#fff;border-radius:14px;padding:16px 22px;border:1px solid var(--border);box-shadow:var(--shadow);display:flex;align-items:center;gap:16px;flex-shrink:0}
-.ncts-ring-wrap{position:relative;width:64px;height:64px;flex-shrink:0}
-.ncts-ring-svg{transform:rotate(-90deg)}
-.ncts-ring-text{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:Bricolage Grotesque,sans-serif;font-size:18px;font-weight:800;color:var(--navy)}
-.ncts-global-info{display:flex;flex-direction:column;gap:2px}
-.ncts-global-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.7px;color:var(--text-soft)}
-.ncts-global-detail{font-size:13px;font-weight:600;color:var(--text)}
-.ncts-trims{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
-.ncts-trim-card{background:#fff;border-radius:12px;padding:14px 16px;border:1px solid var(--border);box-shadow:var(--shadow);position:relative;overflow:hidden}
-.ncts-trim-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px}
-.ncts-trim-card.t1::before{background:var(--cyan)}
-.ncts-trim-card.t2::before{background:var(--amber)}
-.ncts-trim-card.t3::before{background:var(--green)}
-.ncts-trim-card.t4::before{background:#8b5cf6}
-.ncts-trim-title{font-family:Bricolage Grotesque,sans-serif;font-size:16px;font-weight:800;color:var(--navy);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
-.ncts-trim-pct{font-size:20px;color:var(--cyan)}
-.ncts-trim-bar{height:6px;background:var(--bg);border-radius:3px;overflow:hidden;margin-bottom:8px}
-.ncts-trim-fill{height:100%;border-radius:3px;transition:width .3s}
-.ncts-trim-detail{font-size:12px;color:var(--text-soft);font-weight:600}
-.ncts-sectors{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;flex:1;min-height:0;overflow:hidden}
-.ncts-sector-card{background:#fff;border-radius:10px;padding:12px 14px;border:1px solid var(--border);box-shadow:var(--shadow)}
-.ncts-sector-name{font-family:Bricolage Grotesque,sans-serif;font-size:13px;font-weight:700;color:var(--navy);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between}
-.ncts-sector-pct{font-size:14px;font-weight:800}
-.ncts-sector-bar{height:5px;background:var(--bg);border-radius:3px;overflow:hidden;margin-bottom:4px}
-.ncts-sector-fill{height:100%;border-radius:3px}
-.ncts-sector-detail{font-size:11px;color:var(--text-soft);font-weight:600}
-/* TV */
-body.tv-mode .ncts-global{background:#101b2e;border-color:#1a2744}
-body.tv-mode .ncts-ring-text{color:#f1f5f9}
-body.tv-mode .ncts-global-label{color:#94a3b8}
-body.tv-mode .ncts-global-detail{color:#cbd5e1;font-size:14px}
-body.tv-mode .ncts-trim-card{background:#101b2e;border-color:#1a2744}
-body.tv-mode .ncts-trim-title{color:#f1f5f9;font-size:18px}
-body.tv-mode .ncts-trim-pct{font-size:24px}
-body.tv-mode .ncts-trim-bar{background:#1a2744;height:8px}
-body.tv-mode .ncts-trim-detail{color:#94a3b8;font-size:14px}
-body.tv-mode .ncts-sector-card{background:#101b2e;border-color:#1a2744}
-body.tv-mode .ncts-sector-name{color:#f1f5f9;font-size:15px}
-body.tv-mode .ncts-sector-pct{font-size:16px}
-body.tv-mode .ncts-sector-bar{background:#1a2744;height:6px}
-body.tv-mode .ncts-sector-detail{color:#94a3b8;font-size:13px}
-
 /* ─── AVISOS ─── */
 .avisos-grid{display:flex;flex-direction:column;gap:10px;flex:1;overflow:hidden}
 .aviso-card{background:#fff;border-radius:12px;padding:16px 20px;border:1px solid var(--border);box-shadow:var(--shadow);border-left:4px solid var(--cyan)}
@@ -454,7 +410,6 @@ body.tv-mode .branch-count-badge{background:#0ea5e9}
 <button class="tab-btn" id="tab-MAPA" onclick="switchTab('MAPA')"><span class="tab-icon">🩺</span> Mapa</button>
 <button class="tab-btn" id="tab-ECG" onclick="switchTab('ECG')"><span class="tab-icon">❤️</span> ECG</button>
 <button class="tab-btn" id="tab-CHAMADOS" onclick="switchTab('CHAMADOS')"><span class="tab-icon">🎧</span> Chamados</button>
-<button class="tab-btn" id="tab-NCTS" onclick="switchTab('NCTS')"><span class="tab-icon">🎯</span> NCTs</button>
 <button class="tab-btn" id="tab-LOCALIDADE" onclick="switchTab('LOCALIDADE')"><span class="tab-icon">📍</span> Clientes</button>
 <button class="tab-btn" id="tab-AVISOS" onclick="switchTab('AVISOS')"><span class="tab-icon">📢</span> Avisos</button>
 <button class="tab-btn" id="tab-ANIVERSARIANTES" onclick="switchTab('ANIVERSARIANTES')"><span class="tab-icon">🎂</span> Aniversariantes</button>
@@ -466,7 +421,7 @@ body.tv-mode .branch-count-badge{background:#0ea5e9}
 //  CONFIG — CSV direto do Google Sheets (CDN, sem proxy)
 // ═══════════════════════════════════════════════
 const CSV_BASE='https://docs.google.com/spreadsheets/d/e/2PACX-1vTcbbHtFlaA3tt8Mv1NF22YPbetZRLM9chO6G1gqWSpO2RSPQu_7Gzi_V4RINu_CYG-tGCQI4evg3RF/pub?single=true&output=csv&gid=';
-const CSV_GIDS={HOLTER:'0',HOLTER_IEM:'935984391',REPETICAO:'65846932',MAPA:'1563131554',ECG:'135941513',CHAMADOS:'1748165610',FINANCEIRO:'558473626',LOCALIDADE:'1098931569',AVISOS:'2139582642',NCTS:'1774453101',ANIVERSARIANTES:'1697503541',CENTRAIS:'1487541184'};
+const CSV_GIDS={HOLTER:'0',HOLTER_IEM:'935984391',REPETICAO:'65846932',MAPA:'1563131554',ECG:'135941513',CHAMADOS:'1748165610',FINANCEIRO:'558473626',LOCALIDADE:'1098931569',AVISOS:'2139582642',ANIVERSARIANTES:'1697503541',CENTRAIS:'1487541184'};
 const INFO_GIDS={2025:'2085163821',2026:'1499671050'};
 let infoCache={};
 
@@ -479,7 +434,7 @@ const COLS={
   FINANCEIRO:{tipo:0,categoria:1,status:4,banco:5,valorPrev:6,valorReal:7,dataPrev:8,dataReal:9}
 };
 const MONTHS=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-const TAB_ORDER=['GERAL','HOLTER','REPETICAO','MAPA','ECG','CHAMADOS','NCTS','LOCALIDADE','AVISOS','ANIVERSARIANTES'];
+const TAB_ORDER=['GERAL','HOLTER','REPETICAO','MAPA','ECG','CHAMADOS','LOCALIDADE','AVISOS','ANIVERSARIANTES'];
 const CAROUSEL_MS=30000;
 
 // ═══════════════════════════════════════════════
@@ -544,7 +499,7 @@ async function fetchData(key){
 async function preloadAll(){
   document.getElementById('mainContent').innerHTML='<div class="loading"><div class="spinner"></div><span class="loading-text">Carregando dados…</span></div>';
   // Grupo 1: dados principais — carregados primeiro
-  const mainKeys=['HOLTER','HOLTER_IEM','MAPA','ECG','FINANCEIRO','NCTS'];
+  const mainKeys=['HOLTER','HOLTER_IEM','MAPA','ECG','FINANCEIRO'];
   // Grupo 2: dados complementares — carregados após para evitar rate limit
   const extraKeys=['REPETICAO','CHAMADOS','LOCALIDADE','AVISOS','ANIVERSARIANTES','CENTRAIS'];
   const r1=await Promise.allSettled(mainKeys.map(k=>fetchData(k)));
@@ -555,7 +510,7 @@ async function preloadAll(){
 }
 
 async function silentRefresh(){
-  const keys=['HOLTER','HOLTER_IEM','REPETICAO','MAPA','ECG','CHAMADOS','FINANCEIRO','NCTS','LOCALIDADE','AVISOS','ANIVERSARIANTES','CENTRAIS'];
+  const keys=['HOLTER','HOLTER_IEM','REPETICAO','MAPA','ECG','CHAMADOS','FINANCEIRO','LOCALIDADE','AVISOS','ANIVERSARIANTES','CENTRAIS'];
   const saved={};
   keys.forEach(k=>{if(cache[k])saved[k]=cache[k];delete cache[k]});
   await Promise.allSettled(keys.map(k=>fetchData(k).catch(()=>{if(saved[k]&&!cache[k])cache[k]=saved[k]})));
@@ -833,7 +788,6 @@ async function loadTab(tab){
     else if(['HOLTER','MAPA','ECG'].includes(tab))await renderExam(tab);
     else if(tab==='REPETICAO')await renderRep();
     else if(tab==='CHAMADOS')await renderCham();
-    else if(tab==='NCTS')await renderNCTs();
     else if(tab==='ANIVERSARIANTES')await renderAniversariantes();
     else if(tab==='LOCALIDADE')await renderLocalidade();
     else if(tab==='AVISOS')await renderAvisos();
@@ -1101,108 +1055,6 @@ function mkTable(arr,mx,tot,showPct=true){
 
 
 
-
-// ═══════════════════════════════════════════════
-//  RENDER: NCTs (Narrativas, Compromissos, Tarefas)
-// ═══════════════════════════════════════════════
-const TRIM_COLORS={T1:'var(--cyan)',T2:'var(--amber)',T3:'var(--green)',T4:'#8b5cf6'};
-const SECTOR_EMOJIS={Comercial:'💼',CS:'🎧',Educação:'📚',Financeiro:'💰','Gestão de Pessoas':'👥',Holter:'📊',Marketing:'📣',TI:'💻'};
-
-async function renderNCTs(){
-  const{data}=await fetchData('NCTS');
-  // Col: 0=Subnarrativa,1=Compromisso,2=Tarefa,3=Status,4=Trimestre,5=RDI,6=Participante,...,10=Setor,11=Status_R
-  
-  // Filter valid rows (skip headers and empty)
-  const rows=data.filter(r=>{
-    const setor=(r[10]||'').trim();
-    const trim=(r[4]||'').trim();
-    const tarefa=(r[2]||'').trim();
-    return setor&&setor!=='Setor'&&setor!=='#REF!'&&trim&&/^T[1-4]$/.test(trim)&&tarefa;
-  });
-  
-  const totalTasks=rows.length;
-  const doneTasks=rows.filter(r=>String(r[3]).trim()==='TRUE'||String(r[3]).trim()==='true'||r[3]===true).length;
-  const globalPct=totalTasks>0?(doneTasks/totalTasks*100):0;
-  
-  // Per trimester
-  const trims={};
-  ['T1','T2','T3','T4'].forEach(t=>{
-    const tRows=rows.filter(r=>(r[4]||'').trim()===t);
-    const done=tRows.filter(r=>String(r[3]).trim()==='TRUE'||String(r[3]).trim()==='true'||r[3]===true).length;
-    trims[t]={total:tRows.length,done:done,pct:tRows.length>0?(done/tRows.length*100):0};
-  });
-  
-  // Per sector
-  const sectors={};
-  rows.forEach(r=>{
-    const setor=(r[10]||'').trim();
-    if(!sectors[setor])sectors[setor]={total:0,done:0};
-    sectors[setor].total++;
-    if(String(r[3]).trim()==='TRUE'||String(r[3]).trim()==='true'||r[3]===true)sectors[setor].done++;
-  });
-  const sortedSectors=Object.entries(sectors).sort((a,b)=>(b[1].done/b[1].total)-(a[1].done/a[1].total));
-  
-  // Ring SVG
-  const circ=2*Math.PI*26;
-  const ringOffset=circ-(globalPct/100)*circ;
-  const ringColor=globalPct>=70?'var(--green)':globalPct>=40?'var(--amber)':'var(--red)';
-  
-  // Current quarter
-  const currentQ='T'+(Math.floor(new Date().getMonth()/3)+1);
-  
-  document.getElementById('mainContent').innerHTML=`
-    ${tvBadge()}
-    <div class="section-bar">
-      <div style="display:flex;align-items:center;gap:14px">
-        <div class="section-title">🎯 NCTs 2026</div>
-        <div class="section-sub">Narrativas · Compromissos · Tarefas</div>
-      </div>
-    </div>
-    
-    <div class="ncts-header">
-      <div class="ncts-global">
-        <div class="ncts-ring-wrap">
-          <svg class="ncts-ring-svg" width="64" height="64" viewBox="0 0 64 64">
-            <circle cx="32" cy="32" r="26" fill="none" stroke="${carouselActive?'#1a2744':'#e2e8f0'}" stroke-width="6"/>
-            <circle cx="32" cy="32" r="26" fill="none" stroke="${ringColor}" stroke-width="6"
-              stroke-dasharray="${circ}" stroke-dashoffset="${ringOffset}" stroke-linecap="round"/>
-          </svg>
-          <div class="ncts-ring-text">${globalPct.toFixed(0)}%</div>
-        </div>
-        <div class="ncts-global-info">
-          <div class="ncts-global-label">Progresso Geral</div>
-          <div class="ncts-global-detail">${doneTasks} de ${totalTasks} tarefas concluídas</div>
-          <div class="ncts-global-detail">${sortedSectors.length} setores · Trimestre atual: ${currentQ}</div>
-        </div>
-      </div>
-    </div>
-    
-    <div class="ncts-trims">
-      ${['T1','T2','T3','T4'].map(t=>{
-        const s=trims[t];
-        const isCurrent=t===currentQ;
-        const color=TRIM_COLORS[t];
-        return`<div class="ncts-trim-card ${t.toLowerCase()}${isCurrent?' current':''}">
-          <div class="ncts-trim-title"><span>${t}${isCurrent?' ⬤':''}</span><span class="ncts-trim-pct" style="color:${color}">${s.pct.toFixed(0)}%</span></div>
-          <div class="ncts-trim-bar"><div class="ncts-trim-fill" style="width:${s.pct.toFixed(0)}%;background:${color}"></div></div>
-          <div class="ncts-trim-detail">${s.done} de ${s.total} tarefas</div>
-        </div>`;
-      }).join('')}
-    </div>
-    
-    <div class="ncts-sectors">
-      ${sortedSectors.map(([setor,s])=>{
-        const pct=s.total>0?(s.done/s.total*100):0;
-        const color=pct>=70?'var(--green)':pct>=40?'var(--amber)':'var(--cyan)';
-        const emoji=SECTOR_EMOJIS[setor]||'📋';
-        return`<div class="ncts-sector-card">
-          <div class="ncts-sector-name"><span>${emoji} ${esc(setor)}</span><span class="ncts-sector-pct" style="color:${color}">${pct.toFixed(0)}%</span></div>
-          <div class="ncts-sector-bar"><div class="ncts-sector-fill" style="width:${pct.toFixed(0)}%;background:${color}"></div></div>
-          <div class="ncts-sector-detail">${s.done}/${s.total} tarefas concluídas</div>
-        </div>`;
-      }).join('')}
-    </div>`;
-}
 
 // ═══════════════════════════════════════════════
 //  RENDER: ANIVERSARIANTES
